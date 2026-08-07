@@ -122,3 +122,103 @@ export async function sendWelcomeEmail({ to, fullName }) {
     `),
   });
 }
+
+// ─── Listing plan & payment notifications ────────────────────────────────
+
+export async function notifyListingActivated({ to, productTitle, planLabel, expiresAt }) {
+  const expiryStr = expiresAt
+    ? new Date(expiresAt).toLocaleDateString("az-AZ", { day: "2-digit", month: "2-digit", year: "numeric" })
+    : "";
+  return sendEmail({
+    to,
+    subject: `Elanınız aktivləşdirildi: ${productTitle}`,
+    html: wrapper(`
+      <p>Salam,</p>
+      <p><strong>${productTitle}</strong> elanınız <strong style="color:#166534">${planLabel}</strong> paketində aktivləşdirildi.</p>
+      ${expiryStr ? `<p>Bitmə tarixi: <strong>${expiryStr}</strong></p>` : ""}
+      <p>Elanınız artıq bazarda görünür.</p>
+    `),
+  });
+}
+
+export async function notifyListingExpired({ to, productTitle }) {
+  return sendEmail({
+    to,
+    subject: `Elanın müddəti bitdi: ${productTitle}`,
+    html: wrapper(`
+      <p>Salam,</p>
+      <p><strong>${productTitle}</strong> elanınızın müddəti bitmişdir.</p>
+      <p>Elanı yenidən aktivləşdirmək üçün hesabınıza daxil olub paket seçə bilərsiniz.</p>
+      <div style="text-align:center;margin:20px 0">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://fermermarket.az'}/dashboard" 
+           style="background:#16a34a;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:bold;display:inline-block">
+          Elanı yenilə →
+        </a>
+      </div>
+    `),
+  });
+}
+
+export async function notifyPaymentSuccess({ to, amount, planLabel, productTitle }) {
+  return sendEmail({
+    to,
+    subject: `Ödəniş uğurlu — ${amount} AZN`,
+    html: wrapper(`
+      <p>Salam,</p>
+      <p>Ödənişiniz uğurla tamamlandı.</p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0">
+        <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:600">Məbləğ</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${amount} AZN</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:600">Paket</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${planLabel}</td></tr>
+        ${productTitle ? `<tr><td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:600">Elan</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${productTitle}</td></tr>` : ""}
+      </table>
+      <p>Elanınız aktivləşdirilmişdir.</p>
+    `),
+  });
+}
+
+export async function notifyPaymentFailed({ to, amount, planLabel, productTitle }) {
+  return sendEmail({
+    to,
+    subject: `Ödəniş uğursuz — ${amount} AZN`,
+    html: wrapper(`
+      <p>Salam,</p>
+      <p><strong style="color:#b91c1c">Ödəniş uğursuz oldu.</strong></p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0">
+        <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:600">Məbləğ</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${amount} AZN</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:600">Paket</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${planLabel}</td></tr>
+        ${productTitle ? `<tr><td style="padding:8px 12px;border:1px solid #e5e7eb;font-weight:600">Elan</td><td style="padding:8px 12px;border:1px solid #e5e7eb">${productTitle}</td></tr>` : ""}
+      </table>
+      <p>Zəhmət olmasa yenidən cəhd edin və ya hesab balansınızı yoxlayın.</p>
+    `),
+  });
+}
+
+export async function notifyBalanceTopUp({ to, amount, newBalance }) {
+  return sendEmail({
+    to,
+    subject: `Balansınız artırıldı — ${amount} AZN`,
+    html: wrapper(`
+      <p>Salam,</p>
+      <p>Hesab balansınıza <strong>${amount} AZN</strong> əlavə edildi.</p>
+      <p>Cari balansınız: <strong style="font-size:18px;color:#166534">${newBalance} AZN</strong></p>
+    `),
+  });
+}
+
+export async function notifyListingExpiringSoon({ to, productTitle, daysLeft }) {
+  return sendEmail({
+    to,
+    subject: `Elanınızın müddəti bitmək üzrədir — ${daysLeft} gün qalıb`,
+    html: wrapper(`
+      <p>Salam,</p>
+      <p><strong>${productTitle}</strong> elanınızın müddətinin bitməsinə <strong style="color:#b45309">${daysLeft} gün</strong> qalıb.</p>
+      <p>Vaxtında yeniləməyi unutmayın!</p>
+      <div style="text-align:center;margin:20px 0">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://fermermarket.az'}/dashboard" 
+           style="background:#16a34a;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:bold;display:inline-block">
+          Elanı yenilə →
+        </a>
+      </div>
+    `),
+  });
+}

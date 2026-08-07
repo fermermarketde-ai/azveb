@@ -187,6 +187,7 @@ const productRawSchema = z.object({
   wholesaleMinQty: z.number().int().positive().optional().nullable(),
   tags: z.array(z.string().max(50)).max(10).optional(),
   allowInstallment: z.boolean().optional(),
+  brandId: z.string().optional().nullable(),
 });
 
 export const productCreateSchema = productRawSchema.extend({

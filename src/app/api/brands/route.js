@@ -1,13 +1,24 @@
 import { prisma } from "@/lib/prisma";
 import { getAuthUser, requireRole } from "@/lib/auth";
 
-// GET /api/brands — public list of active brands
+// GET /api/brands — public list of active brands; admin can see all with ?all=true
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const withProducts = searchParams.get("withProducts") === "true";
+  const all = searchParams.get("all") === "true";
+
+  // Check if user is admin when requesting all
+  let isAdmin = false;
+  if (all) {
+    const { getAuthUser } = await import("@/lib/auth");
+    const user = await getAuthUser(request);
+    if (user && !user.error && ["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+      isAdmin = true;
+    }
+  }
 
   const brands = await prisma.brand.findMany({
-    where: { isActive: true },
+    where: isAdmin ? {} : { isActive: true },
     orderBy: { sortOrder: "asc" },
     include: withProducts ? { _count: { select: { products: { where: { status: "ACTIVE" } } } } } : false,
   });

@@ -230,7 +230,8 @@ export default function FarmerPanel({ user }) {
   const [aiCategory, setAiCategory] = useState("");
   const [aiError, setAiError] = useState("");
   const [categories, setCategories] = useState([]);
-  const [form, setForm] = useState({ titleAz: "", price: "", stock: 1, categoryId: "", region: "", city: "", descriptionAz: "", images: [], isCorporate: false, minOrderQty: "", tags: [], allowInstallment: false });
+  const [brands, setBrands] = useState([]);
+  const [form, setForm] = useState({ titleAz: "", price: "", stock: 1, categoryId: "", brandId: "", region: "", city: "", descriptionAz: "", images: [], isCorporate: false, minOrderQty: "", tags: [], allowInstallment: false });
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
@@ -282,6 +283,8 @@ export default function FarmerPanel({ user }) {
       });
       setCategories(flat);
     }).catch(() => {});
+    // Load brands for product form
+    apiFetch("/api/brands").then((d) => setBrands(d.brands || [])).catch(() => {});
     loadMyProducts();
   }, []);
 
@@ -378,6 +381,7 @@ export default function FarmerPanel({ user }) {
         images: form.images || [],
         isCorporate: !!form.isCorporate,
         minOrderQty: form.isCorporate && form.minOrderQty ? parseInt(form.minOrderQty, 10) : null,
+        brandId: form.brandId || undefined,
         tags: form.tags || [],
         allowInstallment: !!form.allowInstallment,
       };
@@ -386,7 +390,7 @@ export default function FarmerPanel({ user }) {
       });
       await apiFetch("/api/products", { method: "POST", body: JSON.stringify(payload) });
       setMsg("Elan yaradıldı! Admin təsdiqindən sonra aktivləşəcək.");
-      setForm({ titleAz: "", price: "", stock: 1, categoryId: "", region: "", city: "", descriptionAz: "", images: [], isCorporate: false, minOrderQty: "", allowInstallment: false });
+      setForm({ titleAz: "", price: "", stock: 1, categoryId: "", brandId: "", region: "", city: "", descriptionAz: "", images: [], isCorporate: false, minOrderQty: "", allowInstallment: false });
       loadMyProducts();
     } catch (err) {
       const details = err.details ? Object.values(err.details).flat().join(" · ") : "";
@@ -721,6 +725,10 @@ export default function FarmerPanel({ user }) {
               <select required className="input-field" value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
                 <option value="">Kateqoriya seçin</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <select className="input-field" value={form.brandId} onChange={(e) => setForm({ ...form, brandId: e.target.value })}>
+                <option value="">Brend seçin (opsiyonal)</option>
+                {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
               <div className="grid grid-cols-2 gap-3">
                 <input placeholder="Region" className="input-field" value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} />

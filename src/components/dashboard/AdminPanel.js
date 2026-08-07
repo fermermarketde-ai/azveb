@@ -10,6 +10,7 @@ import MessagingPanel from "@/components/chat/MessagingPanel";
 import AdminProfile from "@/components/dashboard/AdminProfile";
 import SiteTextsManager from "@/components/dashboard/SiteTextsManager";
 import AdminSupport from "@/components/dashboard/AdminSupport";
+import BrandsManager from "@/components/dashboard/BrandsManager";
 import AISettingsManager from "@/components/dashboard/AISettingsManager";
 import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonCard, SkeletonList } from "@/components/ui/Skeleton";
@@ -36,6 +37,7 @@ const SIDEBAR_GROUPS_DEF = [
     { id:"corporate", icon:"building", label:"admin.tab.corporate" },
     { id:"categories",icon:"grid", label:"admin.tab.categories" },
     { id:"stores",    icon:"store", label:"admin.tab.stores" },
+    { id:"brands",    icon:"award", label:"Brendlər" },
   ]},
   { label:"admin.group.orders", items:[
     { id:"orders",    icon:"package", label:"admin.tab.orders" },
@@ -1671,6 +1673,7 @@ export default function AdminPanel() {
       case "corporate":   return <CorporateListingsManager/>;
       case "categories":  return <CategoriesManager/>;
       case "stores":      return <StoresManager/>;
+      case "brands":     return <BrandsManager/>;
       case "orders":      return <OrdersAll/>;
       case "wallet":      return <WalletWithdrawalsManager/>;
       case "coupons":     return <CouponsManager/>;

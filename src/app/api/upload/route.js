@@ -1,7 +1,5 @@
 import { put } from "@vercel/blob";
 import { rateLimit } from "@/lib/rateLimit";
-import fs from "fs/promises";
-import path from "path";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per image
 const MAX_FILES = 8;
@@ -39,27 +37,13 @@ export async function POST(request) {
     }
     const ext = (file.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
     const key = `products/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
-    
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
+
+    try {
       const blob = await put(key, file, { access: "public", contentType: file.type });
       uploaded.push({ url: blob.url });
-    } else {
-      // Local fallback
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const uploadDir = path.join(process.cwd(), "public", "uploads", "products");
-      
-      try {
-        await fs.access(uploadDir);
-      } catch {
-        await fs.mkdir(uploadDir, { recursive: true });
-      }
-      
-      const fileName = key.replace("products/", "");
-      const filePath = path.join(uploadDir, fileName);
-      await fs.writeFile(filePath, buffer);
-      
-      uploaded.push({ url: `/uploads/products/${fileName}` });
+    } catch (err) {
+      console.error("Vercel Blob upload error:", err);
+      return Response.json({ error: "Fayl yüklənərkən xəta baş verdi" }, { status: 500 });
     }
   }
 

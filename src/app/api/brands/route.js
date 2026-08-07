@@ -28,8 +28,9 @@ export async function GET(request) {
 
 // POST /api/brands — admin only
 export async function POST(request) {
-  const user = await requireRole(request, ["ADMIN", "SUPER_ADMIN"]);
-  if (user.error) return Response.json({ error: user.error }, { status: user.status || 403 });
+  const authUser = await getAuthUser(request);
+  const denied = requireRole(authUser, ["ADMIN", "SUPER_ADMIN"]);
+  if (denied) return denied;
 
   try {
     const body = await request.json();

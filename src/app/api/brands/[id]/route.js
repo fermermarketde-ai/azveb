@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/auth";
+import { getAuthUser, requireRole } from "@/lib/auth";
 
 // GET /api/brands/[id] — public brand detail with products
 export async function GET(request, { params }) {
@@ -23,8 +23,9 @@ export async function GET(request, { params }) {
 // PATCH /api/brands/[id] — admin only
 export async function PATCH(request, { params }) {
   const resolvedParams = await params;
-  const user = await requireRole(request, ["ADMIN", "SUPER_ADMIN"]);
-  if (user.error) return Response.json({ error: user.error }, { status: user.status || 403 });
+  const authUser = await getAuthUser(request);
+  const denied = requireRole(authUser, ["ADMIN", "SUPER_ADMIN"]);
+  if (denied) return denied;
 
   try {
     const body = await request.json();
@@ -41,8 +42,9 @@ export async function PATCH(request, { params }) {
 // DELETE /api/brands/[id]
 export async function DELETE(request, { params }) {
   const resolvedParams = await params;
-  const user = await requireRole(request, ["ADMIN", "SUPER_ADMIN"]);
-  if (user.error) return Response.json({ error: user.error }, { status: user.status || 403 });
+  const authUser = await getAuthUser(request);
+  const denied = requireRole(authUser, ["ADMIN", "SUPER_ADMIN"]);
+  if (denied) return denied;
 
   try {
     await prisma.brand.delete({ where: { id: resolvedParams.id } });

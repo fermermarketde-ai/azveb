@@ -1,60 +1,50 @@
-// Use lightweight dompurify instead of isomorphic-dompurify.
-// isomorphic-dompurify requires jsdom which fails to load on Vercel serverless.
-// dompurify works in browser; for server-side, we do a basic tag strip.
-import DOMPurify from 'dompurify';
+// Real parser-based HTML sanitization (sanitize-html / htmlparser2).
+// Naive regex-based stripping (the old approach) is inherently unsound:
+// it can be bypassed with malformed/nested tags and only removes a single
+// occurrence per pass. sanitize-html builds an actual DOM-like parse tree
+// and works in plain Node.js (no jsdom), so it's safe to use on Vercel
+// serverless functions as well as in the browser.
+import sanitizeHtmlLib from 'sanitize-html';
 
-const config = {
-  ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li', 'a', 'img', 'h1', 'h2', 'h3'],
-  ALLOWED_ATTR: ['href', 'title', 'src', 'alt', 'class'],
-  ALLOW_DATA_ATTR: false,
+const HTML_OPTIONS = {
+  allowedTags: ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li', 'a', 'img', 'h1', 'h2', 'h3'],
+  allowedAttributes: {
+    a: ['href', 'title'],
+    img: ['src', 'alt'],
+    '*': ['class'],
+  },
+  // Explicit allow-list of URL schemes for href/src — anything else
+  // (javascript:, data:, vbscript:, etc.) is stripped.
+  allowedSchemes: ['http', 'https', 'mailto'],
+  allowedSchemesByTag: {
+    img: ['http', 'https'],
+  },
+  allowProtocolRelative: false,
+  disallowedTagsMode: 'discard',
 };
-
-// Server-side safe fallback: strip all HTML tags (no DOM available)
-function serverSanitize(dirty) {
-  if (!dirty || typeof dirty !== 'string') return '';
-  // Remove script/style blocks entirely
-  let clean = dirty.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/on\w+="[^"]*"/gi, '')
-    .replace(/on\w+='[^']*'/gi, '')
-    .replace(/javascript:/gi, '');
-  return clean;
-}
 
 export function sanitizeHtml(dirty) {
   if (!dirty || typeof dirty !== 'string') return '';
-  // In browser, use full DOMPurify; on server, use fallback
-  if (typeof window !== 'undefined' && window.DOMPurify) {
-    return DOMPurify.sanitize(dirty, config);
-  }
-  // Server-side: use DOMPurify if it initialized (jsdom), otherwise fallback
-  try {
-    return DOMPurify.sanitize(dirty, config);
-  } catch {
-    return serverSanitize(dirty);
-  }
+  return sanitizeHtmlLib(dirty, HTML_OPTIONS);
 }
 
 export function sanitizeText(text) {
   if (!text || typeof text !== 'string') return '';
-  if (typeof window !== 'undefined' && window.DOMPurify) {
-    return DOMPurify.sanitize(text, { ALLOWED_TAGS: [] });
-  }
-  try {
-    return DOMPurify.sanitize(text, { ALLOWED_TAGS: [] });
-  } catch {
-    return text.replace(/<[^>]*>/g, '');
-  }
+  // No tags allowed at all — strips everything via the real parser.
+  return sanitizeHtmlLib(text, { allowedTags: [], allowedAttributes: {} });
 }
+
+const SAFE_URL_SCHEMES = new Set(['http:', 'https:', 'mailto:']);
 
 export function sanitizeUrl(url) {
   if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
   try {
-    const parsed = new URL(url);
-    if (!['http:', 'https:', 'mailto:'].includes(parsed.protocol)) {
+    const parsed = new URL(trimmed);
+    if (!SAFE_URL_SCHEMES.has(parsed.protocol)) {
       return '';
     }
-    return url;
+    return trimmed;
   } catch {
     return '';
   }

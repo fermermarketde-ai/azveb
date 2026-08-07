@@ -110,6 +110,8 @@ export default function StudioPage() {
     setBlocks(updated);
   };
 
+  const UNSAFE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
   const updateActiveBlock = (key, value) => {
     if (
       activeBlockIndex === null ||
@@ -117,10 +119,14 @@ export default function StudioPage() {
       activeBlockIndex < 0 ||
       activeBlockIndex >= blocks.length
     ) return;
+    if (typeof key !== "string" || UNSAFE_KEYS.has(key)) return;
     const updated = [...blocks];
-    updated[activeBlockIndex].props = {
-      ...updated[activeBlockIndex].props,
-      [key]: value
+    const safeProps = Object.create(null);
+    Object.assign(safeProps, updated[activeBlockIndex].props);
+    safeProps[key] = value;
+    updated[activeBlockIndex] = {
+      ...updated[activeBlockIndex],
+      props: { ...safeProps }
     };
     setBlocks(updated);
     

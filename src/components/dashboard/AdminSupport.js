@@ -41,19 +41,8 @@ export default function AdminSupport() {
       </div>
 
       {/* Quick Links */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <a href="https://docs.base44.com" target="_blank" rel="noopener noreferrer" className="bg-white rounded-2xl border border-gray-100 p-4 hover:border-brand-200 transition">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-              <Icon name="fileText" size={18} className="text-blue-500" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-gray-900">Sənədlər</h3>
-              <p className="text-xs text-gray-500">Texniki dokumentasiya</p>
-            </div>
-          </div>
-        </a>
-        <div className="bg-white rounded-2xl border border-gray-100 p-4">
+      <div className="grid grid-cols-1 gap-3">
+        <a href="mailto:admin@fermermarket.az" className="bg-white rounded-2xl border border-gray-100 p-4 hover:border-brand-200 transition">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
               <Icon name="mail" size={18} className="text-emerald-500" />
@@ -63,7 +52,7 @@ export default function AdminSupport() {
               <p className="text-xs text-gray-500">admin@fermermarket.az</p>
             </div>
           </div>
-        </div>
+        </a>
       </div>
 
       {/* Support Form */}

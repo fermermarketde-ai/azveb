@@ -5,7 +5,7 @@ import Icon from '@/components/ui/Icon';
 import SideBanner from "@/components/Banners/SideBanner";
 import { getTranslations } from 'next-intl/server';
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export default async function CategoriesPage() {
   const t = await getTranslations('Home');

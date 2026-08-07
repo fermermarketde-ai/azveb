@@ -229,7 +229,7 @@ export default function CategoriesSlider({ categories = [], title, subtitle }) {
           onClickCapture={handleClickCapture}
           className="flex gap-3.5 overflow-x-auto no-scrollbar py-2 px-1 scroll-smooth cursor-grab active:cursor-grabbing select-none"
         >
-          {categories.map((c, i) => {
+          {categories.filter(c => c.isActive !== false).map((c, i) => {
             const theme = CATEGORY_THEMES[c.slug] || PALETTES[i % PALETTES.length];
             const iconName = getCategoryIcon(c);
 

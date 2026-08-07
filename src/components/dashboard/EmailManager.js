@@ -1,4 +1,5 @@
 "use client";
+import { sanitizeEmailHtml } from "@/lib/sanitize";
 
 import React, { useState, useEffect, useCallback } from "react";
 import Icon from "@/components/ui/Icon";
@@ -650,7 +651,7 @@ export default function EmailManager() {
                 {selectedEmail.bodyHtml ? (
                   <div
                     className="prose max-w-none text-gray-800 text-sm leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: selectedEmail.bodyHtml }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(selectedEmail.bodyHtml) }}
                   />
                 ) : (
                   <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap font-sans">

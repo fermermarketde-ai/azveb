@@ -1,4 +1,5 @@
 "use client";
+import { sanitizeAdCode } from "@/lib/sanitize";
 import React, { useState, useEffect } from "react";
 import { Link } from "@/i18n/routing";
 
@@ -31,7 +32,7 @@ export default function SideBanner({ position = "left" }) {
   if (ad?.mode === "external" && ad.externalCode) {
     return (
       <div className="hidden xl:block w-[160px] flex-shrink-0 sticky top-24 h-[600px] bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div dangerouslySetInnerHTML={{ __html: ad.externalCode }} />
+        <div dangerouslySetInnerHTML={{ __html: sanitizeAdCode(ad.externalCode) }} />
       </div>
     );
   }

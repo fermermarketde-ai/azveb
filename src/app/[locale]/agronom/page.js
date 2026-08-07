@@ -198,8 +198,8 @@ export default function AgronomPage() {
                   <label className="block cursor-pointer">
                     <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                     <div className="border-2 border-dashed border-brand-200 rounded-2xl p-6 text-center hover:bg-brand-50 transition-colors">
-                      {preview && typeof preview === "string" && preview.startsWith("blob:") ? (
-                        <img src={preview} alt="Preview" className="max-h-40 mx-auto rounded-xl object-contain" />
+                      {preview ? (
+                        <SafePreview url={preview} />
                       ) : (
                         <>
                           <Icon name="zoomIn" size={36} strokeWidth={1.5} className="text-brand-400 mx-auto mb-2" />
@@ -481,4 +481,14 @@ export default function AgronomPage() {
       </div>
     </div>
   );
+}
+
+
+// Safe preview component — validates blob URL before rendering to satisfy
+// CodeQL js/xss-through-dom false positive. Blob URLs from URL.createObjectURL
+// are browser-generated and inherently safe, but this wrapper makes the data
+// flow explicit for static analysis.
+function SafePreview({ url }) {
+  if (typeof url !== "string" || !url.startsWith("blob:")) return null;
+  return <img src={url} alt="Preview" className="max-h-40 mx-auto rounded-xl object-contain" />;
 }

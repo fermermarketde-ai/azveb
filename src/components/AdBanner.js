@@ -1,4 +1,5 @@
 "use client";
+import { sanitizeAdCode } from "@/lib/sanitize";
 import { useEffect, useRef } from "react";
 import SafeImage from "@/components/SafeImage";
 
@@ -26,7 +27,7 @@ export default function AdBanner({ content, className = "", imgClassName = "w-fu
   useEffect(() => {
     if (content?.mode !== "external" || !externalRef.current) return;
     const container = externalRef.current;
-    container.innerHTML = content.externalCode;
+    container.innerHTML = sanitizeAdCode(content.externalCode);
     // Re-execute any <script> tags — innerHTML assignment does not run them
     container.querySelectorAll("script").forEach((oldScript) => {
       const newScript = document.createElement("script");

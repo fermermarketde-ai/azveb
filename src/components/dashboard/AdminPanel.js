@@ -107,7 +107,7 @@ function AdminSidebar({ tab, setTab, badges, collapsed, setCollapsed, t }) {
 
 // ─── Mobile Tab Bar ───────────────────────────────────────────────────────────
 function AdminMobileNav({ tab, setTab }) {
-  const allItems = SIDEBAR_GROUPS.flatMap(g=>g.items);
+  const allItems = SIDEBAR_GROUPS_DEF.flatMap(g=>g.items);
   return (
     <div className="md:hidden sticky top-0 z-30 bg-white border-b border-gray-100 overflow-x-auto no-scrollbar">
       <div className="flex px-2 py-1.5 gap-1 min-w-max">
@@ -1709,7 +1709,7 @@ export default function AdminPanel() {
     <div className="md:grid md:grid-cols-[auto_1fr] min-h-screen bg-gray-50">
       <ToastContainer/>
       {/* Desktop sidebar — fixed height, sticky top, own scroll */}
-      <AdminSidebar tab={tab} setTab={setTab} badges={badges} collapsed={collapsed} setCollapsed={setCollapsed}/>
+      <AdminSidebar tab={tab} setTab={setTab} badges={badges} collapsed={collapsed} setCollapsed={setCollapsed} t={t}/>
       {/* Content area */}
       <div className="flex flex-col min-w-0 flex-1">
         {/* Mobile horizontal tab nav */}

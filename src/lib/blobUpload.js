@@ -1,20 +1,64 @@
 "use client";
-import { upload } from "@vercel/blob/client";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"];
-const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB per file
+const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB pre-compression check
+const MAX_DIMENSION = 1920; // max width/height after resize
+const JPEG_QUALITY = 0.82;
 
-// Uploads one or more files DIRECTLY from the browser to Vercel Blob storage,
-// bypassing our Next.js API route entirely for the actual file bytes (only a
-// short-lived signed token round-trips through /api/upload). This avoids
-// Vercel's ~4.5MB request-body limit on serverless functions, which is what
-// was silently breaking every image upload (Brands, Sliders, product photos,
-// avatars, store logo/cover, guest classifieds) whenever a real phone/camera
-// photo (commonly 5-15MB) was selected — those requests were rejected with a
-// 413 FUNCTION_PAYLOAD_TOO_LARGE before our code even ran.
-//
-// Mirrors the old /api/upload JSON response shape so existing call sites only
-// need a one-line swap: { images: [{ url }], url }
+/**
+ * Compresses/resize an image File using canvas, returns a new File (JPEG).
+ * Keeps files under ~3MB to stay safely within Vercel's 4.5MB function body limit.
+ * HEIC/HEIF not supported by canvas — passed through as-is (rare on web).
+ */
+async function compressImage(file) {
+  // Non-image or HEIC: pass through
+  if (!file.type.startsWith("image/") || file.type === "image/heic" || file.type === "image/heif") {
+    return file;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        if (width > height) {
+          height = Math.round((height * MAX_DIMENSION) / width);
+          width = MAX_DIMENSION;
+        } else {
+          width = Math.round((width * MAX_DIMENSION) / height);
+          height = MAX_DIMENSION;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(file); return; }
+          const compressed = new File([blob], file.name.replace(/\.(png|webp|gif)$/i, ".jpg"), {
+            type: "image/jpeg",
+            lastModified: Date.now(),
+          });
+          resolve(compressed);
+        },
+        "image/jpeg",
+        JPEG_QUALITY
+      );
+    };
+    img.onerror = () => resolve(file); // fallback to original
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+/**
+ * Uploads one or more images via our server-side /api/upload endpoint.
+ * Images are compressed client-side first, then sent as multipart/form-data.
+ * Server handles the actual Vercel Blob upload using put() — no CSP issues,
+ * no undici polyfill problems, no browser→Blob cross-origin PUT needed.
+ * Returns { images: [{url}], url } for backward compatibility with old call sites.
+ */
 export async function uploadFilesToBlob(fileOrFiles) {
   const list = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
   if (!list.length) throw new Error("Heç bir fayl seçilmədi");
@@ -28,15 +72,26 @@ export async function uploadFilesToBlob(fileOrFiles) {
     }
   }
 
+  // Compress all images first
+  const compressed = await Promise.all(list.map((f) => compressImage(f)));
+
   const images = [];
-  for (const file of list) {
-    const ext = (file.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
-    const key = `products/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
-    const blob = await upload(key, file, {
-      access: "public",
-      handleUploadUrl: "/api/upload",
+  for (const file of compressed) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
     });
-    images.push({ url: blob.url });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Yükləmə xətası (${res.status})`);
+    }
+
+    const data = await res.json();
+    images.push({ url: data.url || data.images?.[0]?.url });
   }
 
   return { images, url: images[0]?.url || null };

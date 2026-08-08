@@ -1136,29 +1136,194 @@ function AllListingsManager() {
 // ─── Corporate Listings ───────────────────────────────────────────────────────
 function CorporateListingsManager() {
   const [items,setItems]=useState([]); const [loading,setLoading]=useState(true);
+  const [search,setSearch]=useState(""); const [statusFilter,setStatusFilter]=useState("");
+  const [viewProduct,setViewProduct]=useState(null);
+  const [editProduct,setEditProduct]=useState(null);
+  const [editForm,setEditForm]=useState(null);
+  const [saving,setSaving]=useState(false);
   const { toast, ToastContainer } = useToast();
-  useEffect(()=>{
-    apiFetch("/api/products?corporate=1&pageSize=50").then(d=>setItems(d.products||[])).finally(()=>setLoading(false));
-  },[]);
-  async function updateMinQty(id,minOrderQty){ try{ await apiFetch(`/api/products/${id}`,{method:"PATCH",body:JSON.stringify({minOrderQty:parseInt(minOrderQty)})}); toast("Min sifariş güncəlləndi"); }catch(e){toast(e.message,"error");} }
+  const STATUSES=["ACTIVE","PENDING_REVIEW","REJECTED","SOLD","DRAFT","EXPIRED"];
+  const STATUS_LABELS={ACTIVE:"Aktiv",PENDING_REVIEW:"Gözləyən",REJECTED:"Rədd",SOLD:"Satılıb",DRAFT:"Passiv",EXPIRED:"Bitmib"};
+
+  const load = useCallback(()=>{
+    setLoading(true);
+    const q=new URLSearchParams({corporate:"1",pageSize:100,...(search&&{search}),...(statusFilter&&{status:statusFilter})});
+    apiFetch(`/api/products?${q}`).then(d=>setItems(d.products||[])).catch(e=>toast(e.message,"error")).finally(()=>setLoading(false));
+  },[search,statusFilter]);
+  useEffect(()=>{ load(); },[load]);
+
+  async function openView(id){
+    setViewProduct({ id, loading:true });
+    try{ const d=await apiFetch(`/api/products/${id}`); setViewProduct(d.product||d); }
+    catch(e){ toast(e.message,"error"); setViewProduct(null); }
+  }
+  function openEdit(p){
+    setEditForm({
+      titleAz:p.titleAz||"", price:p.price??"", stock:p.stock??"", minOrderQty:p.minOrderQty||1,
+      descriptionAz:p.descriptionAz||"", region:p.region||"", city:p.city||"", status:p.status,
+    });
+    setEditProduct(p);
+  }
+  async function saveEdit(){
+    if(!editProduct||!editForm) return;
+    setSaving(true);
+    try{
+      const payload={
+        titleAz:editForm.titleAz, price:Number(editForm.price)||0,
+        stock:editForm.stock===""?undefined:Number(editForm.stock),
+        minOrderQty:Number(editForm.minOrderQty)||1, descriptionAz:editForm.descriptionAz||undefined,
+        region:editForm.region||undefined, city:editForm.city||undefined, status:editForm.status,
+      };
+      const d=await apiFetch(`/api/products/${editProduct.id}`,{method:"PATCH",body:JSON.stringify(payload)});
+      setItems(p=>p.map(x=>x.id===editProduct.id?d.product:x));
+      toast("Elan güncəlləndi");
+      setEditProduct(null); setEditForm(null);
+    }catch(e){ toast(e.message,"error"); } finally{ setSaving(false); }
+  }
+  async function changeStatus(id,status){
+    try{
+      await apiFetch(`/api/products/${id}`,{method:"PATCH",body:JSON.stringify({status})});
+      setItems(p=>p.map(x=>x.id===id?{...x,status}:x));
+      toast(status==="ACTIVE"?"Elan aktivləşdirildi":status==="DRAFT"?"Elan passivləşdirildi":"Status dəyişdirildi");
+    }catch(e){ toast(e.message,"error"); }
+  }
+  async function del(id){
+    if(!confirm("Bu korporativ elanı silmək istədiyinizə əminsiniz?")) return;
+    try{ await apiFetch(`/api/products/${id}`,{method:"DELETE"}); setItems(p=>p.filter(x=>x.id!==id)); toast("Silindi"); }
+    catch(e){ toast(e.message,"error"); }
+  }
+
   return (
     <div className="space-y-4">
       <ToastContainer/>
-      <h2 className="section-title">Korporativ Elanlar</h2>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h2 className="section-title">Korporativ Elanlar</h2>
+        <span className="badge badge-gray">{items.length} nəticə</span>
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        <input placeholder="Ad, region, satıcı axtar..." value={search} onChange={e=>setSearch(e.target.value)} className="input-sm flex-1 min-w-40"/>
+        <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} className="select-field w-auto text-xs py-2">
+          <option value="">Bütün statuslar</option>
+          {STATUSES.map(s=><option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+        </select>
+      </div>
       {loading?<SkeletonList count={3}/>:!items.length?<EmptyState icon="building" title="Korporativ elan yoxdur"/>:(
         <div className="space-y-2">
           {items.map(p=>(
-            <div key={p.id} className="card p-4 flex items-center gap-4 flex-wrap">
-              <div className="flex-1 min-w-40"><p className="font-semibold text-sm">{p.titleAz}</p><p className="caption">₼{Number(p.price).toLocaleString("az-AZ")} · {p.seller?.fullName}</p></div>
-              <div className="flex items-center gap-2">
-                <label className="caption">Min sifariş:</label>
-                <input type="number" defaultValue={p.minOrderQty||1} onBlur={e=>updateMinQty(p.id,e.target.value)} className="input-sm w-20"/>
+            <div key={p.id} className="card p-4 flex items-start gap-3">
+              {(p.coverImage||p.images?.[0]?.url)&&<img src={p.coverImage||p.images[0].url} alt="" className="w-14 h-14 rounded-xl object-cover flex-shrink-0"/>}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2 flex-wrap">
+                  <div>
+                    <p className="font-semibold text-sm line-clamp-1">{p.titleAz}</p>
+                    <p className="caption">₼{Number(p.price).toLocaleString("az-AZ")} · {p.seller?.fullName||p.guestName||"—"} {p.seller?.phone&&<span className="text-brand-600 font-medium">· {p.seller.phone}</span>}</p>
+                    <p className="text-[11px] text-gray-400">Min sifariş: {p.minOrderQty||1} {p.unit||""} · {new Date(p.createdAt).toLocaleDateString("az-AZ")}</p>
+                  </div>
+                  <span className={`badge flex-shrink-0 ${PRODUCT_STATUS_COLORS[p.status]||"badge-gray"}`}>{STATUS_LABELS[p.status]||p.status}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <button onClick={()=>openView(p.id)} className="btn-secondary btn-xs flex items-center gap-1"><Icon name="eye" size={12}/>Bax</button>
+                  <button onClick={()=>openEdit(p)} className="btn-secondary btn-xs flex items-center gap-1"><Icon name="edit" size={12}/>Düzəlt</button>
+                  {p.status==="ACTIVE" ? (
+                    <button onClick={()=>changeStatus(p.id,"DRAFT")} className="btn-secondary btn-xs flex items-center gap-1"><Icon name="pause" size={12}/>Passiv et</button>
+                  ) : (
+                    <button onClick={()=>changeStatus(p.id,"ACTIVE")} className="btn-primary btn-xs flex items-center gap-1"><Icon name="check" size={12}/>Aktiv et</button>
+                  )}
+                  <select defaultValue={p.status} onChange={e=>changeStatus(p.id,e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none">
+                    {STATUSES.map(s=><option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+                  </select>
+                  <a href={`/products/${p.slug}`} target="_blank" rel="noopener" className="btn-secondary btn-xs flex items-center gap-1"><Icon name="link" size={12}/>Sayta bax</a>
+                  <button onClick={()=>del(p.id)} className="btn-danger btn-xs flex items-center gap-1"><Icon name="trash" size={12}/>Sil</button>
+                </div>
               </div>
-              <span className={`badge ${PRODUCT_STATUS_COLORS[p.status]||"badge-gray"}`}>{p.status}</span>
             </div>
           ))}
         </div>
       )}
+
+      <Modal open={!!viewProduct} onClose={()=>setViewProduct(null)} title="Korporativ Elana Baxış" size="xl">
+        {viewProduct?.loading ? (
+          <div className="py-10 text-center text-gray-400">Yüklənir...</div>
+        ) : viewProduct ? (
+          <div className="space-y-4 max-h-[75vh] overflow-y-auto">
+            {viewProduct.images?.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {viewProduct.images.map((img,i)=>(
+                  <a key={i} href={img.url} target="_blank" rel="noopener noreferrer">
+                    <img src={img.url} alt={img.altText||""} className="w-full h-40 object-cover rounded-xl border border-gray-100" />
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div className="w-full h-40 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400"><Icon name="package" size={36} /></div>
+            )}
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">{viewProduct.titleAz}</h3>
+              <p className="text-sm text-gray-500">{viewProduct.category?.nameAz}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="p-3 bg-gray-50 rounded-xl"><p className="caption">Qiymət</p><p className="font-bold text-brand-700">₼{Number(viewProduct.price).toLocaleString("az-AZ")} / {viewProduct.unit}</p></div>
+              <div className="p-3 bg-gray-50 rounded-xl"><p className="caption">Stok</p><p className="font-bold">{viewProduct.stock} {viewProduct.unit}</p></div>
+              <div className="p-3 bg-gray-50 rounded-xl"><p className="caption">Bölgə</p><p className="font-medium">{viewProduct.city||viewProduct.region||"—"}</p></div>
+              <div className="p-3 bg-gray-50 rounded-xl"><p className="caption">Tarix</p><p className="font-medium">{new Date(viewProduct.createdAt).toLocaleDateString("az-AZ")}</p></div>
+            </div>
+            <div className="p-3 bg-purple-50 border border-purple-100 rounded-xl text-sm flex items-center gap-2">
+              <Icon name="briefcase" size={14} className="text-purple-600" />
+              <span className="text-purple-700 font-medium">Korporativ elan · Min sifariş: {viewProduct.minOrderQty||"-"} {viewProduct.unit}</span>
+            </div>
+            <div>
+              <p className="caption mb-1">Təsvir</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewProduct.descriptionAz || "Təsvir yoxdur"}</p>
+            </div>
+            <div className="p-3 bg-gray-50 rounded-xl text-sm">
+              <p className="caption mb-1">Satıcı</p>
+              {viewProduct.seller ? (
+                <p className="font-medium">{viewProduct.seller.fullName} {viewProduct.seller.phone ? `· ${viewProduct.seller.phone}` : ""}</p>
+              ) : viewProduct.guestName ? (
+                <p className="font-medium">{viewProduct.guestName} (Qonaq) {viewProduct.guestPhone ? `· ${viewProduct.guestPhone}` : ""}</p>
+              ) : (
+                <p className="text-gray-400">Məlumat yoxdur</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+              <span className={`badge ${PRODUCT_STATUS_COLORS[viewProduct.status]||"badge-gray"}`}>{STATUS_LABELS[viewProduct.status]||viewProduct.status}</span>
+              <button onClick={()=>{setViewProduct(null); openEdit(viewProduct);}} className="btn-secondary btn-sm flex items-center gap-1 ml-auto"><Icon name="edit" size={13}/>Düzəlt</button>
+              {viewProduct.status==="ACTIVE" ? (
+                <button onClick={()=>{changeStatus(viewProduct.id,"DRAFT"); setViewProduct(null);}} className="btn-secondary btn-sm flex items-center gap-1"><Icon name="pause" size={13}/>Passiv et</button>
+              ) : (
+                <button onClick={()=>{changeStatus(viewProduct.id,"ACTIVE"); setViewProduct(null);}} className="btn-primary btn-sm flex items-center gap-1"><Icon name="check" size={13}/>Aktiv et</button>
+              )}
+              <button onClick={()=>{del(viewProduct.id); setViewProduct(null);}} className="btn-danger btn-sm flex items-center gap-1"><Icon name="trash" size={13}/>Sil</button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+
+      <Modal open={!!editProduct} onClose={()=>{setEditProduct(null);setEditForm(null);}} title="Korporativ Elanı Düzəlt" size="lg">
+        {editForm && (
+          <div className="space-y-3">
+            <div><label className="label">Başlıq</label><input className="input-field" value={editForm.titleAz} onChange={e=>setEditForm(p=>({...p,titleAz:e.target.value}))}/></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="label">Qiymət (₼)</label><input type="number" step="0.01" className="input-field" value={editForm.price} onChange={e=>setEditForm(p=>({...p,price:e.target.value}))}/></div>
+              <div><label className="label">Stok</label><input type="number" className="input-field" value={editForm.stock} onChange={e=>setEditForm(p=>({...p,stock:e.target.value}))}/></div>
+              <div><label className="label">Min sifariş</label><input type="number" min="1" className="input-field" value={editForm.minOrderQty} onChange={e=>setEditForm(p=>({...p,minOrderQty:e.target.value}))}/></div>
+              <div>
+                <label className="label">Status</label>
+                <select className="select-field" value={editForm.status} onChange={e=>setEditForm(p=>({...p,status:e.target.value}))}>
+                  {STATUSES.map(s=><option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+                </select>
+              </div>
+              <div><label className="label">Region</label><input className="input-field" value={editForm.region} onChange={e=>setEditForm(p=>({...p,region:e.target.value}))}/></div>
+              <div><label className="label">Şəhər</label><input className="input-field" value={editForm.city} onChange={e=>setEditForm(p=>({...p,city:e.target.value}))}/></div>
+            </div>
+            <div><label className="label">Təsvir</label><textarea rows={4} className="input-field" value={editForm.descriptionAz} onChange={e=>setEditForm(p=>({...p,descriptionAz:e.target.value}))}/></div>
+            <div className="flex gap-2 pt-2">
+              <button disabled={saving} onClick={saveEdit} className="btn-primary flex-1 disabled:opacity-50 flex items-center justify-center gap-1"><Icon name="check" size={14}/>Yadda saxla</button>
+              <button onClick={()=>{setEditProduct(null);setEditForm(null);}} className="btn-secondary flex-1">Bağla</button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

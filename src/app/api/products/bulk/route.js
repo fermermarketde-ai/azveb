@@ -43,9 +43,15 @@ export async function POST(request) {
     result = await prisma.product.deleteMany({ where: { id: { in: targetIds } } });
   } else {
     const statusMap = { activate: "ACTIVE", deactivate: "DRAFT", archive: "EXPIRED" };
+    const data = { status: statusMap[action] };
+    // Same 24h auto-expiry window as the single-product PATCH endpoint.
+    if (action === "activate") {
+      data.publishedAt = new Date();
+      data.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    }
     result = await prisma.product.updateMany({
       where: { id: { in: targetIds } },
-      data: { status: statusMap[action] },
+      data,
     });
   }
 

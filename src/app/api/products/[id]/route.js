@@ -127,6 +127,14 @@ export async function PATCH(request, { params }) {
       finalData = corpData;
     }
 
+    // Listings get a 24h visibility window every time they (re)enter ACTIVE —
+    // auto-expiry (see /api/cron/expire-listings) flips them to EXPIRED after that,
+    // hiding them from search/category browsing.
+    if (finalData.status === "ACTIVE" && product.status !== "ACTIVE") {
+      finalData.publishedAt = new Date();
+      finalData.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
       const result = await tx.product.update({
         where: { id: productId },

@@ -3,21 +3,14 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
 export function validateJwtSecrets() {
-  const accessSecret = process.env.JWT_ACCESS_SECRET;
-  const refreshSecret = process.env.JWT_REFRESH_SECRET;
+  const accessSecret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
+  const refreshSecret = process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET;
 
-  if (!accessSecret || !refreshSecret) {
-    throw new Error(
-      "CRITICAL: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be set in environment variables. Never use fallback secrets in production!"
-    );
+  if (!accessSecret) {
+    throw new Error("CRITICAL: JWT_ACCESS_SECRET (or JWT_SECRET) must be set in environment variables.");
   }
-
-  if (accessSecret.length < 32) {
-    throw new Error("JWT_ACCESS_SECRET must be at least 32 characters long.");
-  }
-
-  if (refreshSecret.length < 32) {
-    throw new Error("JWT_REFRESH_SECRET must be at least 32 characters long.");
+  if (!refreshSecret) {
+    throw new Error("CRITICAL: JWT_REFRESH_SECRET (or JWT_SECRET) must be set in environment variables.");
   }
 
   return { accessSecret, refreshSecret };
@@ -40,6 +33,7 @@ export async function hashPassword(plain) {
 }
 
 export async function verifyPassword(plain, hash) {
+  if (!plain || !hash) return false;
   return bcrypt.compare(plain, hash);
 }
 
@@ -52,9 +46,11 @@ export function signAccessToken(user) {
 }
 
 export function signRefreshToken(user) {
-  return jwt.sign({ sub: user.id }, getRefreshSecret(), {
-    expiresIn: `${REFRESH_TOKEN_TTL_DAYS}d`,
-  });
+  return jwt.sign(
+    { sub: user.id, role: user.role },
+    getRefreshSecret(),
+    { expiresIn: `${REFRESH_TOKEN_TTL_DAYS}d` }
+  );
 }
 
 export function refreshTokenExpiryDate() {
@@ -64,6 +60,7 @@ export function refreshTokenExpiryDate() {
 }
 
 export function verifyAccessToken(token) {
+  if (!token) return null;
   const secret = getAccessSecret();
   try {
     return jwt.verify(token, secret);
@@ -73,6 +70,7 @@ export function verifyAccessToken(token) {
 }
 
 export function verifyRefreshToken(token) {
+  if (!token) return null;
   const secret = getRefreshSecret();
   try {
     return jwt.verify(token, secret);
@@ -86,20 +84,39 @@ export function verifyRefreshToken(token) {
  * Returns the decoded payload or null.
  */
 export async function getAuthUser(request) {
-  // 1. Try Authorization: Bearer header (client-side apiFetch)
-  const authHeader = request.headers.get("authorization") || "";
-  const [scheme, token] = authHeader.split(" ");
-  let payload = null;
-  if (scheme === "Bearer" && token) {
-    payload = verifyAccessToken(token);
+  if (!request) return null;
+
+  let token = null;
+
+  // 1. Try Authorization: Bearer header
+  const authHeader = request.headers?.get("authorization") || "";
+  const [scheme, bearerToken] = authHeader.split(" ");
+  if (scheme === "Bearer" && bearerToken) {
+    token = bearerToken;
   }
 
-  // 2. Fallback: try HttpOnly cookie (set by server on login/refresh)
-  if (!payload) {
-    const cookieHeader = request.headers.get("cookie") || "";
-    const match = cookieHeader.match(/(?:^|;\s*)fmk_access_token=([^;]+)/);
+  // 2. Fallback: try HttpOnly cookies
+  if (!token) {
+    const cookieHeader = request.headers?.get("cookie") || "";
+    const match = cookieHeader.match(/(?:^|;\s*)(?:fmk_access_token|accessToken|token)=([^;]+)/);
     if (match) {
-      payload = verifyAccessToken(match[1]);
+      token = match[1];
+    }
+  }
+
+  if (!token) return null;
+
+  let payload = verifyAccessToken(token);
+
+  // 3. Fallback: if access token expired/invalid, try refresh token cookie
+  if (!payload) {
+    const cookieHeader = request.headers?.get("cookie") || "";
+    const refreshMatch = cookieHeader.match(/(?:^|;\s*)(?:fmk_refresh_token|refreshToken)=([^;]+)/);
+    if (refreshMatch) {
+      const refreshPayload = verifyRefreshToken(refreshMatch[1]);
+      if (refreshPayload) {
+        payload = refreshPayload;
+      }
     }
   }
 
@@ -116,10 +133,11 @@ export async function getAuthUser(request) {
       select: { role: true, email: true, status: true, isBanned: true },
     });
     if (!user) return null;
-    if (user.status === "BANNED" || user.isBanned) return null;
+    if (user.status === "BANNED" || user.status === "SUSPENDED" || user.isBanned) return null;
     return { ...payload, role: user.role, email: user.email };
   } catch {
     // If DB is unreachable, fall back to JWT payload (better than blocking all APIs)
+    if (payload.status === "BANNED" || payload.status === "SUSPENDED" || payload.isBanned) return null;
     return payload;
   }
 }
@@ -131,21 +149,16 @@ export function generatePasswordResetToken() {
 }
 
 export function hashResetToken(rawToken) {
+  if (!rawToken) return "";
   return crypto.createHash("sha256").update(rawToken).digest("hex");
 }
 
 export function requireRole(authUser, allowedRoles) {
   if (!authUser) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!allowedRoles.includes(authUser.role)) {
-    return new Response(JSON.stringify({ error: "Forbidden" }), {
-      status: 403,
-      headers: { "Content-Type": "application/json" },
-    });
+  if (!allowedRoles || !allowedRoles.includes(authUser.role)) {
+    return Response.json({ error: "Forbidden" }, { status: 403 });
   }
   return null;
 }

@@ -63,7 +63,6 @@ export async function POST(request) {
     ...(parsed.data.contentAz ? { contentAz: sanitizeHtml(parsed.data.contentAz) } : {}),
     ...(parsed.data.contentEn ? { contentEn: sanitizeHtml(parsed.data.contentEn) } : {}),
     ...(parsed.data.contentRu ? { contentRu: sanitizeHtml(parsed.data.contentRu) } : {}),
-    ...(parsed.data.content ? { content: sanitizeHtml(parsed.data.content) } : {}),
   };
 
   const post = await prisma.blogPost.create({

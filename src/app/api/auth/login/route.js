@@ -4,10 +4,9 @@ import { verifyPassword, signAccessToken, signRefreshToken, refreshTokenExpiryDa
 import { loginSchema } from "@/lib/validators";
 
 export async function POST(request) {
-  // Apply requested rate limiting: 5 attempts / 15 min
+  // Apply rate limiting: 5 attempts / 15 min
   const rl = rateLimit(request, { limit: 5, windowMs: 15 * 60_000, keyPrefix: "login" });
   if (rl) {
-    // Log failed attempts due to rate limiting
     try {
       const body = await request.clone().json().catch(() => ({}));
       const login = body.login || "unknown";
@@ -39,6 +38,7 @@ export async function POST(request) {
   }
 
   const { login, password } = parsed.data;
+  const cleanLogin = login.trim();
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "127.0.0.1";
 
   let user;
@@ -46,16 +46,16 @@ export async function POST(request) {
     user = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: login },
-          { phone: login },
-          { username: login },
-        ]
-      }
+          { email: { equals: cleanLogin, mode: "insensitive" } },
+          { username: { equals: cleanLogin, mode: "insensitive" } },
+          { phone: cleanLogin },
+        ],
+      },
     });
   } catch (error) {
     console.error("Database connection error in login:", error);
     return Response.json({
-      error: "Verilənlər bazasına qoşulmaq mümkün olmadı. Zəhmət olmasa Vercel-də DATABASE_URL tənzimləməsini yoxlayın.",
+      error: "Verilənlər bazasına qoşulmaq mümkün olmadı. Zəhmət olmasa tənzimləmələri yoxlayın.",
       code: "DB_CONN"
     }, { status: 500 });
   }
@@ -65,7 +65,7 @@ export async function POST(request) {
       data: {
         action: "FAILED_LOGIN",
         entity: "User",
-        metadata: { details: `Non-existent user attempt for login: ${login} from IP: ${ip}` },
+        metadata: { details: `Non-existent user attempt for login: ${cleanLogin} from IP: ${ip}` },
       },
     }).catch(() => {});
     return Response.json({ error: "İstifadəçi adı və ya şifrə yanlışdır" }, { status: 401 });
@@ -85,7 +85,7 @@ export async function POST(request) {
     return Response.json({ error: "İstifadəçi adı və ya şifrə yanlışdır" }, { status: 401 });
   }
 
-  if (user.status === "SUSPENDED" || user.status === "BANNED") {
+  if (user.status === "SUSPENDED" || user.status === "BANNED" || user.isBanned) {
     await prisma.auditLog.create({
       data: {
         userId: user.id,
@@ -101,15 +101,18 @@ export async function POST(request) {
   const accessToken = signAccessToken(user);
   const refreshToken = signRefreshToken(user);
 
-  await prisma.refreshToken.create({
-    data: {
-      token: refreshToken,
-      userId: user.id,
-      expiresAt: refreshTokenExpiryDate(),
-    },
-  });
+  try {
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        expiresAt: refreshTokenExpiryDate(),
+      },
+    });
+  } catch (err) {
+    console.error("Failed to save refresh token:", err);
+  }
 
-  // Log successful login too
   await prisma.auditLog.create({
     data: {
       userId: user.id,
@@ -119,6 +122,9 @@ export async function POST(request) {
       metadata: { details: `Successful login from IP: ${ip}` },
     },
   }).catch(() => {});
+
+  const isProd = process.env.NODE_ENV === "production";
+  const secureFlag = isProd ? "; Secure" : "";
 
   const res = Response.json({
     user: {
@@ -132,7 +138,15 @@ export async function POST(request) {
     accessToken,
     refreshToken,
   });
-  // Set cookie so middleware can verify auth on server-side
-  res.headers.set("Set-Cookie", `fmk_access_token=${accessToken}; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly`);
+
+  res.headers.append(
+    "Set-Cookie",
+    `fmk_access_token=${accessToken}; Path=/; Max-Age=604800; SameSite=Lax; HttpOnly${secureFlag}`
+  );
+  res.headers.append(
+    "Set-Cookie",
+    `fmk_refresh_token=${refreshToken}; Path=/; Max-Age=2592000; SameSite=Lax; HttpOnly${secureFlag}`
+  );
+
   return res;
 }

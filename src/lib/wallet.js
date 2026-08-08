@@ -15,6 +15,8 @@ export async function creditSellerEarningsForOrder(orderId) {
   // Group items by seller, net of commission
   const bySeller = {};
   for (const item of order.items) {
+    // Skip guest items — no wallet to credit
+    if (!item.sellerId || item.sellerId === "guest") continue;
     const net = Number(item.unitPrice) * item.quantity * (1 - Number(item.commissionRate));
     bySeller[item.sellerId] = (bySeller[item.sellerId] || 0) + net;
   }

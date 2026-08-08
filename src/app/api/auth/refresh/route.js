@@ -1,21 +1,23 @@
 import { prisma } from "@/lib/prisma";
-import { verifyRefreshToken, signAccessToken } from "@/lib/auth";
+import { verifyRefreshToken, signAccessToken, signRefreshToken, refreshTokenExpiryDate } from "@/lib/auth";
 
-// POST /api/auth/refresh
-// Body: { refreshToken }
-// Exchanges a still-valid, non-revoked refresh token for a new short-lived access token.
-// This is the missing piece that was causing authenticated actions to silently be treated
-// as anonymous/guest once the 15-minute access token expired (client kept stale cached
-// user info while the server correctly rejected the expired token).
 export async function POST(request) {
-  let body;
+  let body = {};
   try {
-    body = await request.json();
-  } catch {
-    return Response.json({ error: "Yanlış JSON formatı" }, { status: 400 });
+    body = await request.json().catch(() => ({}));
+  } catch {}
+
+  let refreshToken = body?.refreshToken;
+
+  // Fallback to HttpOnly cookie if refreshToken not provided in JSON body
+  if (!refreshToken) {
+    const cookieHeader = request.headers.get("cookie") || "";
+    const match = cookieHeader.match(/(?:^|;\s*)(?:fmk_refresh_token|refreshToken)=([^;]+)/);
+    if (match) {
+      refreshToken = match[1];
+    }
   }
 
-  const { refreshToken } = body || {};
   if (!refreshToken) {
     return Response.json({ error: "refreshToken tələb olunur" }, { status: 400 });
   }
@@ -31,14 +33,39 @@ export async function POST(request) {
   }
 
   const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-  if (!user || user.status === "SUSPENDED" || user.status === "BANNED") {
+  if (!user || user.status === "SUSPENDED" || user.status === "BANNED" || user.isBanned) {
     return Response.json({ error: "Hesab tapılmadı və ya bloklanıb" }, { status: 401 });
   }
 
-  const accessToken = signAccessToken(user);
+  const newAccessToken = signAccessToken(user);
+  const newRefreshToken = signRefreshToken(user);
+
+  // Rotate/update refresh token in database
+  try {
+    await prisma.refreshToken.update({
+      where: { token: refreshToken },
+      data: {
+        token: newRefreshToken,
+        expiresAt: refreshTokenExpiryDate(),
+      },
+    });
+  } catch {
+    // If update failed, create new refresh token record
+    await prisma.refreshToken.create({
+      data: {
+        token: newRefreshToken,
+        userId: user.id,
+        expiresAt: refreshTokenExpiryDate(),
+      },
+    }).catch(() => {});
+  }
+
+  const isProd = process.env.NODE_ENV === "production";
+  const secureFlag = isProd ? "; Secure" : "";
 
   const res = Response.json({
-    accessToken,
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
     user: {
       id: user.id,
       email: user.email,
@@ -48,6 +75,15 @@ export async function POST(request) {
       status: user.status,
     },
   });
-  res.headers.set("Set-Cookie", `fmk_access_token=${accessToken}; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly`);
+
+  res.headers.append(
+    "Set-Cookie",
+    `fmk_access_token=${newAccessToken}; Path=/; Max-Age=604800; SameSite=Lax; HttpOnly${secureFlag}`
+  );
+  res.headers.append(
+    "Set-Cookie",
+    `fmk_refresh_token=${newRefreshToken}; Path=/; Max-Age=2592000; SameSite=Lax; HttpOnly${secureFlag}`
+  );
+
   return res;
 }

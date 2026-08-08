@@ -22,17 +22,20 @@ export async function POST(request) {
     );
   }
 
-  const wallet = await prisma.wallet.findUnique({ where: { userId: authUser.sub } });
-  if (!wallet || Number(wallet.balance) < parsed.data.amount) {
-    return Response.json({ error: "Balans yetərli deyil" }, { status: 422 });
-  }
+  // Use interactive transaction to prevent race condition on balance check
+  const tx = await prisma.$transaction(async (prismaTx) => {
+    const wallet = await prismaTx.wallet.findUnique({ where: { userId: authUser.sub } });
+    if (!wallet) throw new Error("NO_WALLET");
+    if (Number(wallet.balance) < parsed.data.amount) throw new Error("INSUFFICIENT_FUNDS");
 
-  const [, tx] = await prisma.$transaction([
-    prisma.wallet.update({
+    const updatedWallet = await prismaTx.wallet.update({
       where: { id: wallet.id },
       data: { balance: { decrement: parsed.data.amount } },
-    }),
-    prisma.walletTransaction.create({
+    });
+
+    if (Number(updatedWallet.balance) < 0) throw new Error("INSUFFICIENT_FUNDS");
+
+    const transaction = await prismaTx.walletTransaction.create({
       data: {
         walletId: wallet.id,
         type: "WITHDRAWAL",
@@ -40,8 +43,21 @@ export async function POST(request) {
         amount: parsed.data.amount,
         description: parsed.data.note || "Çıxarış tələbi",
       },
-    }),
-  ]);
+    });
+
+    return transaction;
+  }).catch((err) => {
+    if (err.message === "NO_WALLET") return null;
+    if (err.message === "INSUFFICIENT_FUNDS") return "INSUFFICIENT_FUNDS";
+    throw err;
+  });
+
+  if (tx === "INSUFFICIENT_FUNDS") {
+    return Response.json({ error: "Balans yetərli deyil" }, { status: 422 });
+  }
+  if (!tx) {
+    return Response.json({ error: "Pul kisəsi tapılmadı" }, { status: 404 });
+  }
 
   return Response.json({ transaction: tx }, { status: 201 });
 }

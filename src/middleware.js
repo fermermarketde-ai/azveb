@@ -1,4 +1,3 @@
-
 import createMiddleware from 'next-intl/middleware';
 import { NextResponse } from 'next/server';
 import { routing } from './i18n/routing';
@@ -23,8 +22,13 @@ export default function middleware(request) {
 
   const isAdminRoute = normalizedPath === '/admin' || normalizedPath.startsWith('/admin/');
   const isDashboardRoute = normalizedPath === '/dashboard' || normalizedPath.startsWith('/dashboard/');
+  const isMessagesRoute = normalizedPath === '/messages' || normalizedPath.startsWith('/messages/');
+  const isCheckoutRoute = normalizedPath === '/checkout' || normalizedPath.startsWith('/checkout/');
 
-  if (isAdminRoute || isDashboardRoute) {
+  // NOTE: /elan-yerlesdir is intentionally NOT protected — it's for guest classifieds (no login required)
+  const isProtectedRoute = isAdminRoute || isDashboardRoute || isMessagesRoute || isCheckoutRoute;
+
+  if (isProtectedRoute) {
     let token = null;
     const authHeader = request.headers.get('authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -39,7 +43,6 @@ export default function middleware(request) {
     const authUser = token ? verifyAccessToken(token) : null;
 
     if (!authUser) {
-      // With as-needed prefix, don't add /az for default locale
       const prefix = locale === routing.defaultLocale ? '' : `/${locale}`;
       const loginUrl = new URL(`${prefix}/login`, request.url);
       loginUrl.searchParams.set('callbackUrl', pathname);

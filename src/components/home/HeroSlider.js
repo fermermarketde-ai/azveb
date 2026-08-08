@@ -159,10 +159,10 @@ export default function HeroSlider() {
         ))}
       </div>
       
-      {/* Wave bottom */}
+      {/* Smooth wave bottom — gentle curve, no jagged edges */}
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
-        <svg viewBox="0 0 1440 40" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-6 md:h-10">
-          <path d="M0 40 C360 0 1080 0 1440 40 L1440 40 L0 40 Z" fill="#F8FAFC" />
+        <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-8 md:h-12">
+          <path d="M0,60 C480,20 960,20 1440,60 L1440,60 L0,60 Z" fill="var(--bg, #F8FAFC)" />
         </svg>
       </div>
     </section>

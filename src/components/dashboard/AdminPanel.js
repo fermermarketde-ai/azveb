@@ -500,6 +500,7 @@ function UsersManager() {
 function OrdersAll() {
   const [orders,setOrders]=useState([]); const [loading,setLoading]=useState(true);
   const [statusFilter,setStatusFilter]=useState("");
+  const { t } = useSiteTexts();
   const { toast, ToastContainer } = useToast();
   useEffect(()=>{ load(); },[statusFilter]);
   function load(){
@@ -518,7 +519,7 @@ function OrdersAll() {
       </div>
       <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} className="select-field w-auto">
         <option value="">Bütün statuslar</option>
-        {Object.entries(ORDER_STATUS_LABELS).map(([k,v])=><option key={k} value={k}>{v}</option>)}
+        {Object.keys(ORDER_STATUS_COLORS).map(k=><option key={k} value={k}>{getOrderStatusLabel(k,t)}</option>)}
       </select>
       {loading ? <SkeletonList count={5}/> : !orders.length ? <EmptyState icon="package" title="Sifariş tapılmadı"/> : (
         <div className="card overflow-x-auto">
@@ -536,10 +537,10 @@ function OrdersAll() {
                   <td className="table-cell w-36"><p className="font-mono text-xs text-gray-500">#{o.id.slice(-8)}</p><p className="caption">{new Date(o.createdAt).toLocaleDateString("az-AZ")}</p></td>
                   <td className="table-cell hidden sm:table-cell min-w-[160px] truncate">{o.buyer?.fullName||"—"}</td>
                   <td className="table-cell font-semibold text-brand-700 w-28">₼{Number(o.total).toLocaleString("az-AZ")}</td>
-                  <td className="table-cell w-32"><span className={`badge ${ORDER_STATUS_COLORS[o.status]||"badge-gray"}`}>{ORDER_STATUS_LABELS[o.status]}</span></td>
+                  <td className="table-cell w-32"><span className={`badge ${ORDER_STATUS_COLORS[o.status]||"badge-gray"}`}>{getOrderStatusLabel(o.status,t)}</span></td>
                   <td className="table-cell text-right w-40">
                     <select defaultValue={o.status} onChange={e=>changeStatus(o.id,e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-brand-400">
-                      {Object.entries(ORDER_STATUS_LABELS).map(([k,v])=><option key={k} value={k}>{v}</option>)}
+                      {Object.keys(ORDER_STATUS_COLORS).map(k=><option key={k} value={k}>{getOrderStatusLabel(k,t)}</option>)}
                     </select>
                   </td>
                 </tr>

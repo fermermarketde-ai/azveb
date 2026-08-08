@@ -18,7 +18,7 @@ export default function Modal({ open, onClose, title, children, size="md" }) {
 
   return createPortal(
     <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-4">
-      <div className="overlay" onClick={onClose} />
+      <div className="fixed inset-0 bg-zinc-950/30 backdrop-blur-sm z-0" onClick={onClose} />
       <div className={`relative z-10 w-full ${widths[size]} bg-white rounded-3xl shadow-2xl animate-scale-in overflow-hidden`}>
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">

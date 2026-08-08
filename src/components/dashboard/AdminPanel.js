@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import Icon from "@/components/ui/Icon";
+import ImageUploader from "@/components/ImageUploader";
 import { apiFetch, getToken } from "@/lib/apiClient";
 import { uploadFilesToBlob } from "@/lib/blobUpload";
 import StatCard from "@/components/ui/StatCard";
@@ -1162,6 +1163,7 @@ function CorporateListingsManager() {
     setEditForm({
       titleAz:p.titleAz||"", price:p.price??"", stock:p.stock??"", minOrderQty:p.minOrderQty||1,
       descriptionAz:p.descriptionAz||"", region:p.region||"", city:p.city||"", status:p.status,
+      images:(p.images||[]).map(img=>({url:img.url})),
     });
     setEditProduct(p);
   }
@@ -1174,6 +1176,7 @@ function CorporateListingsManager() {
         stock:editForm.stock===""?undefined:Number(editForm.stock),
         minOrderQty:Number(editForm.minOrderQty)||1, descriptionAz:editForm.descriptionAz||undefined,
         region:editForm.region||undefined, city:editForm.city||undefined, status:editForm.status,
+        images:editForm.images,
       };
       const d=await apiFetch(`/api/products/${editProduct.id}`,{method:"PATCH",body:JSON.stringify(payload)});
       setItems(p=>p.map(x=>x.id===editProduct.id?d.product:x));
@@ -1303,6 +1306,7 @@ function CorporateListingsManager() {
       <Modal open={!!editProduct} onClose={()=>{setEditProduct(null);setEditForm(null);}} title="Korporativ Elanı Düzəlt" size="lg">
         {editForm && (
           <div className="space-y-3">
+            <div><label className="label">Şəkillər</label><ImageUploader value={editForm.images||[]} onChange={(imgs)=>setEditForm(p=>({...p,images:imgs}))} max={8}/></div>
             <div><label className="label">Başlıq</label><input className="input-field" value={editForm.titleAz} onChange={e=>setEditForm(p=>({...p,titleAz:e.target.value}))}/></div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="label">Qiymət (₼)</label><input type="number" step="0.01" className="input-field" value={editForm.price} onChange={e=>setEditForm(p=>({...p,price:e.target.value}))}/></div>

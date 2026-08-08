@@ -415,8 +415,7 @@ function ProfileSettings({ user }) {
     try {
       const fd = new FormData();
       fd.append("files", file);
-      const res = await apiFetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
+      const data = await apiFetch("/api/upload", { method: "POST", body: fd });
       const url = data.url || data.images?.[0]?.url;
       if (url) {
         setForm(prev => ({ ...prev, avatarUrl: url }));

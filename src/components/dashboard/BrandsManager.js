@@ -30,10 +30,7 @@ export default function BrandsManager() {
   async function loadBrands() {
     setLoading(true);
     try {
-      const res = await apiFetch("/api/brands?withProducts=true&all=true");
-      const data = await res.json();
-      // API only returns active brands; for admin we need all
-      // We'll fetch all via a separate call if needed, but the API returns active only
+      const data = await apiFetch("/api/brands?withProducts=true&all=true");
       setBrands(data.brands || []);
     } catch (err) {
       toast.error("Brendlər yüklənmədi");
@@ -46,8 +43,7 @@ export default function BrandsManager() {
   async function loadBrandProducts(brandId) {
     setProductsLoading(brandId);
     try {
-      const res = await apiFetch(`/api/brands/${brandId}`);
-      const data = await res.json();
+      const data = await apiFetch(`/api/brands/${brandId}`);
       setBrandProducts(prev => ({ ...prev, [brandId]: data.brand?.products || [] }));
     } catch {
       toast.error("Məhsullar yüklənmədi");
@@ -96,8 +92,7 @@ export default function BrandsManager() {
     const formData = new FormData();
     formData.append("files", file);
     try {
-      const res = await apiFetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
+      const data = await apiFetch("/api/upload", { method: "POST", body: formData });
       const url = data.url || data.images?.[0]?.url;
       if (url) {
         setForm(prev => ({ ...prev, logoUrl: url }));
@@ -118,31 +113,21 @@ export default function BrandsManager() {
     }
     try {
       if (editingBrand) {
-        const res = await apiFetch(`/api/brands/${editingBrand.id}`, {
+        await apiFetch(`/api/brands/${editingBrand.id}`, {
           method: "PATCH",
           body: JSON.stringify(form),
         });
-        if (res.ok) {
-          toast.success("Brend yeniləndi");
-          resetForm();
-          loadBrands();
-        } else {
-          const err = await res.json();
-          toast.error(err.error || "Xəta");
-        }
+        toast.success("Brend yeniləndi");
+        resetForm();
+        loadBrands();
       } else {
-        const res = await apiFetch("/api/brands", {
+        await apiFetch("/api/brands", {
           method: "POST",
           body: JSON.stringify(form),
         });
-        if (res.ok) {
-          toast.success("Brend əlavə edildi");
-          resetForm();
-          loadBrands();
-        } else {
-          const err = await res.json();
-          toast.error(err.error || "Xəta");
-        }
+        toast.success("Brend əlavə edildi");
+        resetForm();
+        loadBrands();
       }
     } catch {
       toast.error("Əməliyyat xətası");
@@ -152,14 +137,9 @@ export default function BrandsManager() {
   async function handleDelete(brand) {
     if (!confirm(`"${brand.name}" brendini silmək istədiyinizə əminsiniz?`)) return;
     try {
-      const res = await apiFetch(`/api/brands/${brand.id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast.success("Brend silindi");
-        loadBrands();
-      } else {
-        const err = await res.json();
-        toast.error(err.error || "Silinmədi");
-      }
+      await apiFetch(`/api/brands/${brand.id}`, { method: "DELETE" });
+      toast.success("Brend silindi");
+      loadBrands();
     } catch {
       toast.error("Əməliyyat xətası");
     }
@@ -167,14 +147,12 @@ export default function BrandsManager() {
 
   async function toggleActive(brand) {
     try {
-      const res = await apiFetch(`/api/brands/${brand.id}`, {
+      await apiFetch(`/api/brands/${brand.id}`, {
         method: "PATCH",
         body: JSON.stringify({ isActive: !brand.isActive }),
       });
-      if (res.ok) {
-        toast.success(brand.isActive ? "Brend deaktiv edildi" : "Brend aktiv edildi");
-        loadBrands();
-      }
+      toast.success(brand.isActive ? "Brend deaktiv edildi" : "Brend aktiv edildi");
+      loadBrands();
     } catch {
       toast.error("Xəta");
     }

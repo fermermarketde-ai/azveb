@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Icon from "@/components/ui/Icon";
 import { apiFetch, getToken } from "@/lib/apiClient";
+import { uploadFilesToBlob } from "@/lib/blobUpload";
 import StatCard from "@/components/ui/StatCard";
 import AnalyticsPanel from "@/components/dashboard/AnalyticsPanel";
 import NoCodeAdminStudio from "@/components/dashboard/NoCodeAdminStudio";
@@ -1571,12 +1572,7 @@ function SliderManager() {
   async function uploadSlideImage(file, onDone) {
     setUploadingImg(true);
     try {
-      const fd = new FormData();
-      fd.append("files", file);
-      const token = getToken();
-      const res = await fetch("/api/upload", { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : undefined, body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Yükləmə xətası");
+      const data = await uploadFilesToBlob(file);
       onDone(data.images[0].url);
     } catch (err) { toast(err.message, "error"); }
     finally { setUploadingImg(false); }

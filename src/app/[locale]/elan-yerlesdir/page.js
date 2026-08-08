@@ -3,6 +3,7 @@ import Icon from "@/components/ui/Icon";
 import { useEffect, useState } from "react";
 import { Link } from "@/i18n/routing";
 import { apiFetch, getUser, getToken } from "@/lib/apiClient";
+import { uploadFilesToBlob } from "@/lib/blobUpload";
 
 // Role-based restrictions removed — all users can post listings
 
@@ -102,16 +103,7 @@ export default function PostListingPage() {
     setError("");
     setUploading(true);
     try {
-      const fd = new FormData();
-      files.forEach((f) => fd.append("files", f));
-      const token = getToken();
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        body: fd,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Yükləmə xətası");
+      const data = await uploadFilesToBlob(files);
       
       const newImages = [...form.images, ...data.images].slice(0, 5);
       setForm(prev => ({ ...prev, images: newImages }));

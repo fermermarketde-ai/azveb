@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import Icon from "@/components/ui/Icon";
 import { apiFetch } from "@/lib/apiClient";
+import { uploadFilesToBlob } from "@/lib/blobUpload";
 import { useToast } from "@/components/ui/Toast";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 
@@ -85,14 +86,8 @@ export default function BrandsManager() {
   async function handleUploadLogo(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Maksimum 5MB");
-      return;
-    }
-    const formData = new FormData();
-    formData.append("files", file);
     try {
-      const data = await apiFetch("/api/upload", { method: "POST", body: formData });
+      const data = await uploadFilesToBlob(file);
       const url = data.url || data.images?.[0]?.url;
       if (url) {
         setForm(prev => ({ ...prev, logoUrl: url }));
@@ -100,8 +95,8 @@ export default function BrandsManager() {
       } else {
         toast.error("Şəkil yüklənmədi");
       }
-    } catch {
-      toast.error("Yükləmə xətası");
+    } catch (err) {
+      toast.error(err.message || "Yükləmə xətası");
     }
   }
 

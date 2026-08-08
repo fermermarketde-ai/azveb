@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "@/i18n/routing";
 import Icon from "@/components/ui/Icon";
 import { apiFetch } from "@/lib/apiClient";
+import { uploadFilesToBlob } from "@/lib/blobUpload";
 
 export default function StoreProfileHeader({ store, user, onEdit, stats }) {
   const [coverUrl, setCoverUrl] = useState(store?.coverUrl || "");
@@ -33,14 +34,7 @@ export default function StoreProfileHeader({ store, user, onEdit, stats }) {
 
     setIsUploadingCover(true);
     try {
-      const formData = new FormData();
-      formData.append("files", file);
-
-      const uploadRes = await apiFetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
+      const uploadRes = await uploadFilesToBlob(file);
       const newCoverUrl = uploadRes?.images?.[0]?.url || uploadRes?.url;
       if (!newCoverUrl) throw new Error("Yüklənmə uğursuz oldu");
 
@@ -67,14 +61,7 @@ export default function StoreProfileHeader({ store, user, onEdit, stats }) {
 
     setIsUploadingLogo(true);
     try {
-      const formData = new FormData();
-      formData.append("files", file);
-
-      const uploadRes = await apiFetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
+      const uploadRes = await uploadFilesToBlob(file);
       const newLogoUrl = uploadRes?.images?.[0]?.url || uploadRes?.url;
       if (!newLogoUrl) throw new Error("Yüklənmə uğursuz oldu");
 

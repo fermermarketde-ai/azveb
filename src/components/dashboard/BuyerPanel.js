@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "@/i18n/routing";
 import { apiFetch } from "@/lib/apiClient";
+import { uploadFilesToBlob } from "@/lib/blobUpload";
 import MessagingPanel from "@/components/chat/MessagingPanel";
 import AnalyticsPanel from "@/components/dashboard/AnalyticsPanel";
 import Icon from "@/components/ui/Icon";
@@ -413,9 +414,7 @@ function ProfileSettings({ user }) {
     if (file.size > 5 * 1024 * 1024) { setError("Maksimum 5MB"); return; }
     setAvatarUploading(true); setError("");
     try {
-      const fd = new FormData();
-      fd.append("files", file);
-      const data = await apiFetch("/api/upload", { method: "POST", body: fd });
+      const data = await uploadFilesToBlob(file);
       const url = data.url || data.images?.[0]?.url;
       if (url) {
         setForm(prev => ({ ...prev, avatarUrl: url }));

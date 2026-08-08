@@ -1,7 +1,7 @@
 "use client";
 import Icon from "@/components/ui/Icon";
 import { useRef, useState, useCallback } from "react";
-import { getToken } from "@/lib/apiClient";
+import { uploadFilesToBlob } from "@/lib/blobUpload";
 
 // Reusable multi-image uploader with previews, drag-to-reorder, and cover selection.
 // value: array of { url } — controlled from parent form state.
@@ -23,19 +23,10 @@ export default function ImageUploader({ value = [], onChange, max = 8 }) {
     setError("");
     setUploading(true);
     try {
-      const fd = new FormData();
-      files.forEach((f) => fd.append("files", f));
-      const token = getToken();
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        body: fd,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Yükləmə xətası");
+      const data = await uploadFilesToBlob(files);
       onChange([...value, ...data.images]);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Yükləmə xətası");
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";

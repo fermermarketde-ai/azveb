@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "@/i18n/routing";
 import { apiFetch, getUser } from "@/lib/apiClient";
 import StoreDashboard from "@/components/dashboard/store/StoreDashboard";
-import BuyerPanel from "@/components/dashboard/BuyerPanel";
+import BuyerPanel, { ProfileAndStoreSection } from "@/components/dashboard/BuyerPanel";
 import DeliveryPanel from "@/components/dashboard/DeliveryPanel";
 
 const ROLE_LABELS = {
@@ -86,8 +86,10 @@ export default function DashboardPage() {
       </div>
 
       {user?.role === "DELIVERY_PARTNER" && <DeliveryPanel user={user} />}
-      
-      <div className="space-y-4">
+
+      {user?.role !== "DELIVERY_PARTNER" && <ProfileAndStoreSection user={user} />}
+
+      <div className="space-y-4 mt-4">
         {hasStore && (
            <StoreDashboard user={user} />
         )}

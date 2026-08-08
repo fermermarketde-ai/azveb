@@ -194,6 +194,23 @@ function OrderCard({ order: o }) {
   );
 }
 
+// ─── Profile + Store Creation (rendered above the tab bar, at the top of the dashboard) ──
+export function ProfileAndStoreSection({ user }) {
+  const hasStore = !!(user?.store || user?.ownedStores?.length > 0);
+  return (
+    <div className="space-y-4">
+      <ProfileSettings user={user} />
+      {!hasStore && (
+        <div className="card p-5">
+          <h2 className="font-bold mb-4 text-gray-900 flex items-center gap-2"><Icon name="store" size={20} className="text-brand-600" /> Mağaza Yarat</h2>
+          <p className="text-sm text-gray-500 mb-6">Öz mağazanızı yaradaraq məhsullarınızı satmağa başlayın. Mağaza yaratdıqdan sonra satıcı panelinə keçid edəcəksiniz.</p>
+          <StoreCreateForm />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BuyerPanel({ user }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -230,8 +247,6 @@ export default function BuyerPanel({ user }) {
     { id: "favorites", label: "Sevimlilər", icon: "heart" },
     ...(user?.store ? [] : [{ id: "messages", label: "Mesajlar", icon: "message" }]),
     { id: "analytics", label: "Statistika", icon: "dashboard" },
-    ...(user?.store || user?.ownedStores?.length > 0 ? [] : [{ id: "store", label: "Mağazam", icon: "store" }]),
-    { id: "profile", label: "Profil", icon: "user" },
   ];
   tabs.push({ id: "agro", label: "Aqronom", icon: "sprout" });
 
@@ -337,15 +352,6 @@ export default function BuyerPanel({ user }) {
       {/* Analytics */}
       {tab === "analytics" && <BuyerStats />}
 
-      {/* Store Creation */}
-      {tab === "store" && (
-        <div className="card p-5">
-          <h2 className="font-bold mb-4 text-gray-900 flex items-center gap-2"><Icon name="store" size={20} className="text-brand-600" /> Mağaza Yarat</h2>
-          <p className="text-sm text-gray-500 mb-6">Öz mağazanızı yaradaraq məhsullarınızı satmağa başlayın. Mağaza yaratdıqdan sonra satıcı panelinə keçid edəcəksiniz.</p>
-          <StoreCreateForm />
-        </div>
-      )}
-
       {/* Agronomist section */}
       {tab === "agro" && (
         <div className="card p-5">
@@ -357,14 +363,12 @@ export default function BuyerPanel({ user }) {
         </div>
       )}
 
-      {/* Profile Settings */}
-      {tab === "profile" && <ProfileSettings user={user} />}
     </div>
   );
 }
 
 // ─── Profile Settings ─────────────────────────────────────────────────────────
-function ProfileSettings({ user }) {
+export function ProfileSettings({ user }) {
   const [form, setForm] = useState({
     fullName: user?.fullName || "",
     phone: user?.phone || "",
@@ -530,7 +534,7 @@ function ProfileSettings({ user }) {
 }
 
 // ─── Store Creation Form ──────────────────────────────────────────────────────
-function StoreCreateForm() {
+export function StoreCreateForm() {
   const [form, setForm] = useState({ name: "", description: "", address: "", phone: "", whatsapp: "", website: "" });
   const [extra, setExtra] = useState({ voen: "", authorizedPerson: "", taxOffice: "", legalAddress: "" });
   const [showExtra, setShowExtra] = useState(false);

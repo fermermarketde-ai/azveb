@@ -4,8 +4,10 @@ import { Link } from "@/i18n/routing";
 import SafeImage from "@/components/SafeImage";
 import { getCart, updateQuantity, removeFromCart, cartTotal, getItemPrice } from "@/lib/cartClient";
 import Icon from "@/components/ui/Icon";
+import { useSiteTexts } from "@/lib/siteTexts";
 
 export default function CartPage() {
+  const { t } = useSiteTexts();
   const [items, setItems] = useState([]);
 
   useEffect(() => {
@@ -20,15 +22,15 @@ export default function CartPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center pb-24">
         <Icon name="cart" size={44} className="mx-auto mb-3 text-gray-300" strokeWidth={1.4} />
-        <h1 className="text-xl font-bold">Səbətiniz boşdur</h1>
-        <Link href="/products" className="btn-primary inline-block mt-5">Elanlara bax</Link>
+        <h1 className="text-xl font-bold">{t('cart.empty_title', 'Səbətiniz boşdur')}</h1>
+        <Link href="/products" className="btn-primary inline-block mt-5">{t('cart.browse_products', 'Elanlara bax')}</Link>
       </div>
     );
   }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 pb-24">
-      <h1 className="text-xl font-bold mb-4">Səbət ({items.length} məhsul)</h1>
+      <h1 className="text-xl font-bold mb-4">{t('cart.title', 'Səbət')} ({items.length} {t('cart.item_count', 'məhsul')})</h1>
       <div className="space-y-3">
         {items.map((item) => {
           const wholesaleMin = item.wholesaleMinQty || 1;
@@ -49,9 +51,9 @@ export default function CartPage() {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm truncate">{item.title}</p>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="text-green-700 font-bold text-sm">{currentPrice} AZN</p>
+                  <p className="text-green-700 font-bold text-sm">{currentPrice} {t('common.currency', 'AZN')}</p>
                   {isWholesalePriceApplied && (
-                    <span className="text-[10px] bg-green-100 text-green-800 px-1.5 rounded font-bold">Topdan qiymət!</span>
+                    <span className="text-[10px] bg-green-100 text-green-800 px-1.5 rounded font-bold">{t('cart.wholesale_price', 'Topdan qiymət!')}</span>
                   )}
                 </div>
                 {item.isCorporate && (
@@ -76,7 +78,7 @@ export default function CartPage() {
               </div>
               <button
                 onClick={() => refresh(removeFromCart(item.productId))}
-                aria-label="Sil"
+                aria-label={t('common.delete', 'Sil')}
                 className="w-9 h-9 flex items-center justify-center rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 active:scale-95 transition-all"
               ><Icon name="close" size={16} /></button>
             </div>
@@ -84,11 +86,11 @@ export default function CartPage() {
         })}
       </div>
       <div className="card p-4 mt-5 flex items-center justify-between">
-        <span className="font-semibold text-gray-700">Cəmi</span>
-        <span className="text-xl font-extrabold text-green-700">{cartTotal(items).toFixed(2)} AZN</span>
+        <span className="font-semibold text-gray-700">{t('cart.total', 'Cəmi')}</span>
+        <span className="text-xl font-extrabold text-green-700">{cartTotal(items).toFixed(2)} {t('common.currency', 'AZN')}</span>
       </div>
       <Link href="/checkout" className="w-full block text-center mt-4 bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white font-bold py-3.5 rounded-xl shadow-md hover:shadow-lg transition-all">
-        Sifarişi tamamla <Icon name="chevronDown" size={16} className="-rotate-90" />
+        {t('cart.checkout', 'Sifarişi tamamla')} <Icon name="chevronDown" size={16} className="-rotate-90" />
       </Link>
     </div>
   );

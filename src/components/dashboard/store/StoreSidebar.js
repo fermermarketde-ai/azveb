@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "@/i18n/routing";
 import Icon from "@/components/ui/Icon";
+import { clearSession } from "@/lib/apiClient";
 
 const NAVIGATION_SECTIONS = [
   {
@@ -11,9 +13,6 @@ const NAVIGATION_SECTIONS = [
       { id: "products", label: "Məhsullar", icon: "package" },
       { id: "orders", label: "Sifarişlər", icon: "cart" },
       { id: "messages", label: "Mesajlar", icon: "message" },
-      { id: "reviews", label: "Rəylər", icon: "star" },
-      { id: "favorites", label: "Seçilmişlər", icon: "heart" },
-      { id: "coupons", label: "Kuponlar", icon: "percent" },
     ],
   },
   {
@@ -21,22 +20,17 @@ const NAVIGATION_SECTIONS = [
     items: [
       { id: "analytics", label: "Analitika", icon: "barChart" },
       { id: "settings", label: "Tənzimləmələr", icon: "settings" },
-      { id: "subscription", label: "Paketlər", icon: "crown" },
     ],
   },
   {
     title: "MƏBLƏĞ",
     items: [
       { id: "wallet", label: "Balans & Kisə", icon: "wallet" },
-      { id: "invoices", label: "Hesab-fakturalar", icon: "fileText" },
     ],
   },
   {
     title: "HESAB",
     items: [
-      { id: "notifications", label: "Bildirişlər", icon: "bell" },
-      { id: "support", label: "Dəstək & Yardım", icon: "info" },
-      { id: "security", label: "Təhlükəsizlik", icon: "shield" },
       { id: "logout", label: "Çıxış", icon: "logout" },
     ],
   },
@@ -49,8 +43,14 @@ export default function StoreSidebar({
   user,
 }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const router = useRouter();
 
   function handleSelectTab(tabId) {
+    if (tabId === "logout") {
+      clearSession();
+      router.push("/");
+      return;
+    }
     if (onTabChange) onTabChange(tabId);
     setIsMobileOpen(false);
   }

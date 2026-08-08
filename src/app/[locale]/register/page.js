@@ -4,9 +4,11 @@ import { useRouter } from "@/i18n/routing";
 import { Link } from "@/i18n/routing";
 import { apiFetch, saveSession } from "@/lib/apiClient";
 import Icon from "@/components/ui/Icon";
+import { useSiteTexts } from "@/lib/siteTexts";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t } = useSiteTexts();
   const [activeTab, setActiveTab] = useState("B2C");
   const [form, setForm] = useState({ email: "", username: "", password: "", confirmPassword: "", fullName: "", phone: "", });
   const [showPass, setShowPass] = useState(false);
@@ -17,7 +19,7 @@ export default function RegisterPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (form.password !== form.confirmPassword) {
-      setError("Şifrələr uyğun gəlmir"); return;
+      setError(t('register.error_mismatch', 'Şifrələr uyğun gəlmir')); return;
     }
     setLoading(true); setError("");
     try {
@@ -29,7 +31,7 @@ export default function RegisterPage() {
       saveSession({ accessToken: data.accessToken, refreshToken: data.refreshToken, user: data.user });
       router.push("/dashboard");
     } catch (err) {
-      setError(err.message || "Qeydiyyat mümkün olmadı");
+      setError(err.message || t('register.error_generic', 'Qeydiyyat mümkün olmadı'));
     } finally {
       setLoading(false);
     }
@@ -53,8 +55,8 @@ export default function RegisterPage() {
           <div className="w-14 h-14 bg-gradient-to-br from-green-600 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
             <Icon name="sprout" size={26} className="text-white" strokeWidth={1.8} />
           </div>
-          <h1 className="text-2xl font-black text-gray-900">Qeydiyyat</h1>
-          <p className="text-gray-500 text-sm mt-1">FermerMarket ailəsinə qoşulun</p>
+          <h1 className="text-2xl font-black text-gray-900">{t('register.title', 'Qeydiyyat')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('register.subtitle', 'FermerMarket ailəsinə qoşulun')}</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
@@ -66,27 +68,27 @@ export default function RegisterPage() {
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Ad Soyad</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">{t('register.label_name', 'Ad Soyad')}</label>
               <input type="text" required className="input-field" value={form.fullName}
                 onChange={(e) => setForm({ ...form, fullName: e.target.value })} placeholder="Əli Həsənov" />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">İstifadəçi adı (Login)</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">{t('register.label_username', 'İstifadəçi adı (Login)')}</label>
               <input type="text" className="input-field" value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="Nümunə: user123" />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Email (İstəyə bağlı)</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">{t('register.label_email', 'Email (İstəyə bağlı)')}</label>
               <input type="email" className="input-field" value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@example.com" />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Telefon</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">{t('register.label_phone', 'Telefon')}</label>
               <input type="tel" className="input-field" value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+994501234567" />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Şifrə</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">{t('register.label_password', 'Şifrə')}</label>
               <div className="relative">
                 <input type={showPass ? "text" : "password"} required className="input-field pr-11" value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Ən azı 8 simvol, 1 böyük hərf, 1 rəqəm" />
@@ -98,7 +100,7 @@ export default function RegisterPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Şifrəni təkrarla</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">{t('register.label_password_confirm', 'Şifrəni təkrarla')}</label>
               <div className="relative">
                 <input type={showConfirm ? "text" : "password"} required className="input-field pr-11" value={form.confirmPassword}
                   onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} placeholder="Şifrəni yenidən yazın" />
@@ -111,12 +113,12 @@ export default function RegisterPage() {
             </div>
             <button type="submit" disabled={loading}
               className="w-full bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white font-bold py-3 rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-60">
-              {loading ? "Yüklənir..." : "Qeydiyyatdan keç"}
+              {loading ? t('common.loading', 'Yüklənir...') : t('register.button', 'Qeydiyyatdan keç')}
             </button>
           </form>
           <p className="text-center text-sm text-gray-500 mt-4">
-            Hesabınız var?{" "}
-            <Link href="/login" className="text-green-600 font-semibold hover:underline">Daxil ol</Link>
+            {t('register.have_account', 'Hesabınız var?')}{" "}
+            <Link href="/login" className="text-green-600 font-semibold hover:underline">{t('register.login_link', 'Daxil ol')}</Link>
           </p>
           </div>
         </div>

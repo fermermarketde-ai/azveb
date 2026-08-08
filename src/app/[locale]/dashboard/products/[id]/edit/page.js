@@ -5,7 +5,7 @@ import { apiFetch, getUser, getToken } from "@/lib/apiClient";
 import Icon from "@/components/ui/Icon";
 
 export default function UserEditProductPage({ params }) {
-  const { id } = params;
+  const { id } = use(params);
   const router = useRouter();
   
   const [categories, setCategories] = useState([]);

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
+import { getAuthUser, requireRole } from "@/lib/auth";
 
 // GET blocks for a page
 export async function GET(req) {
@@ -23,6 +22,9 @@ export async function GET(req) {
 
 // POST to save page layout
 export async function POST(req) {
+  const authUser = await getAuthUser(req);
+  const denied = requireRole(authUser, ["ADMIN", "SUPER_ADMIN"]);
+  if (denied) return denied;
   try {
     const body = await req.json();
     

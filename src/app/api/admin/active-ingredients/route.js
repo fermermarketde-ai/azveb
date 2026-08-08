@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import slugify from "slugify";
+import { getAuthUser, requireRole } from "@/lib/auth";
 
 export async function GET() {
   try {
@@ -14,6 +15,9 @@ export async function GET() {
 }
 
 export async function POST(req) {
+  const authUser = await getAuthUser(req);
+  const denied = requireRole(authUser, ["ADMIN", "SUPER_ADMIN"]);
+  if (denied) return denied;
   try {
     const body = await req.json();
     const { id, name, nameAz, description } = body;
@@ -38,6 +42,9 @@ export async function POST(req) {
 }
 
 export async function DELETE(req) {
+  const authUser = await getAuthUser(req);
+  const denied = requireRole(authUser, ["ADMIN", "SUPER_ADMIN"]);
+  if (denied) return denied;
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');

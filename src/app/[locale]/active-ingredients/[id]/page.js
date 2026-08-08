@@ -8,7 +8,7 @@ import SafeImage from "@/components/SafeImage";
 import { apiFetch } from "@/lib/apiClient";
 
 export default function ActiveIngredientDetailPage({ params }) {
-  const { id } = params;
+  const { id } = use(params);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

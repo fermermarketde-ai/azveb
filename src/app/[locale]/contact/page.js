@@ -2,10 +2,10 @@
 import React, { useState } from 'react';
 import Icon from '@/components/ui/Icon';
 import toast from 'react-hot-toast';
-
-// (Metadata is normally not allowed in 'use client' pages if not exported separately, but since layout handles title, we can just remove this export or split. For now, removing metadata export so Next.js doesn't throw error on use client.)
+import { useSiteTexts } from '@/lib/siteTexts';
 
 export default function ContactPage() {
+  const { t } = useSiteTexts();
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -14,7 +14,6 @@ export default function ContactPage() {
     const formData = new FormData(e.target);
     const data = Object.fromEntries(formData.entries());
     
-    // Convert phone to string and use email if not provided (fallback)
     if (!data.email) data.email = "no-email@fermermarket.az";
 
     try {
@@ -39,7 +38,7 @@ export default function ContactPage() {
       <div className="container mx-auto px-4 max-w-5xl">
         
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">Bizimlə Əlaqə</h1>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">{t('contact.title', 'Bizimlə Əlaqə')}</h1>
           <p className="text-lg text-gray-500 max-w-2xl mx-auto">
             Hər hansı sualınız, təklifiniz və ya şikayətiniz varsa, bizimlə əlaqə saxlamaqdan çəkinməyin. Komandamız sizə ən qısa zamanda geri dönüş edəcək.
           </p>
@@ -47,15 +46,14 @@ export default function ContactPage() {
 
         <div className="grid md:grid-cols-3 gap-8">
           
-          {/* Contact Info Sidebar */}
           <div className="md:col-span-1 space-y-6">
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-start gap-4">
               <div className="w-12 h-12 bg-brand-50 rounded-2xl flex items-center justify-center text-brand-600 shrink-0">
                 <Icon name="phone" size={24} />
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 mb-1">Müştəri Xidmətləri</h3>
-                <p className="text-gray-500 text-sm mb-2">Həftəiçi: 09:00 - 18:00</p>
+                <h3 className="font-bold text-gray-900 mb-1">{t('contact.support_title', 'Müştəri Xidmətləri')}</h3>
+                <p className="text-gray-500 text-sm mb-2">{t('contact.support_hours', 'Həftəiçi: 09:00 - 18:00')}</p>
                 <a href="tel:+994500000000" className="text-brand-600 font-bold hover:underline">+994 50 000 00 00</a>
               </div>
             </div>
@@ -65,8 +63,8 @@ export default function ContactPage() {
                 <Icon name="message" size={24} />
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 mb-1">Elektron Poçt</h3>
-                <p className="text-gray-500 text-sm mb-2">Bizə 7/24 yaza bilərsiniz</p>
+                <h3 className="font-bold text-gray-900 mb-1">{t('contact.email_title', 'Elektron Poçt')}</h3>
+                <p className="text-gray-500 text-sm mb-2">{t('contact.email_desc', 'Bizə 7/24 yaza bilərsiniz')}</p>
                 <a href="mailto:info@fermermarket.az" className="text-brand-600 font-bold hover:underline">info@fermermarket.az</a>
               </div>
             </div>
@@ -77,21 +75,19 @@ export default function ContactPage() {
               </div>
               <div>
                 <h3 className="font-bold text-gray-900 mb-1">Ünvan</h3>
-                <p className="text-gray-500 text-sm">Bakı şəhəri, Azərbaycan</p>
+                <p className="text-gray-500 text-sm">{t('contact.address', 'Bakı şəhəri, Azərbaycan')}</p>
               </div>
             </div>
           </div>
 
-          {/* Contact Form */}
           <div className="md:col-span-2">
             <div className="bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-xl shadow-gray-200/50 border border-white h-full">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Bizə Yazın</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('contact.form_title', 'Bizə Yazın')}</h2>
               
-              {/* Form is handled via client-side fetch */}
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div className="grid md:grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">Adınız və Soyadınız</label>
+                    <label className="text-sm font-semibold text-gray-700">{t('contact.label_name', 'Adınız və Soyadınız')}</label>
                     <input 
                       type="text" 
                       name="name" 
@@ -113,20 +109,20 @@ export default function ContactPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700">Mövzu</label>
+                  <label className="text-sm font-semibold text-gray-700">{t('contact.label_subject', 'Mövzu')}</label>
                   <select 
                     name="subject" 
                     className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 focus:bg-white transition-all outline-none"
                   >
                     <option value="general">Ümumi sual</option>
-                    <option value="support">Texniki dəstək</option>
+                    <option value="support">{t('contact.subject_support', 'Texniki dəstək')}</option>
                     <option value="partnership">Əməkdaşlıq</option>
-                    <option value="complaint">Şikayət</option>
+                    <option value="complaint">{t('contact.subject_complaint', 'Şikayət')}</option>
                   </select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700">Mesajınız</label>
+                  <label className="text-sm font-semibold text-gray-700">{t('contact.label_message', 'Mesajınız')}</label>
                   <textarea 
                     name="message" 
                     rows="5" 
@@ -142,7 +138,7 @@ export default function ContactPage() {
                   className={`w-full ${loading ? "bg-gray-400" : "bg-brand-600 hover:bg-brand-700"} text-white font-bold py-3.5 rounded-xl shadow-lg shadow-brand-500/30 transition-all hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2`}
                 >
                   <Icon name={loading ? "loader" : "send"} size={20} className={loading ? "animate-spin" : ""} />
-                  {loading ? "Göndərilir..." : "Mesajı Göndər"}
+                  {loading ? t('common.loading', 'Göndərilir...') : t('contact.send_button', 'Mesajı Göndər')}
                 </button>
               </form>
             </div>

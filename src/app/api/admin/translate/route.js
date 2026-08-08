@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
+import { getAuthUser, requireRole } from '@/lib/auth';
 
 // Mock Translation Engine API
 export async function POST(req) {
+  const authUser = await getAuthUser(req);
+  const denied = requireRole(authUser, ["ADMIN", "SUPER_ADMIN"]);
+  if (denied) return denied;
   try {
     const { text, targetLang } = await req.json();
     

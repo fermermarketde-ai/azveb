@@ -5,6 +5,18 @@ import { useEffect } from 'react';
 export default function Error({ error, reset }) {
   useEffect(() => {
     console.error('Page error:', error);
+    try {
+      fetch('/api/debug-client-error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: error?.message,
+          stack: error?.stack,
+          digest: error?.digest,
+          url: typeof window !== 'undefined' ? window.location.href : null,
+        }),
+      }).catch(() => {});
+    } catch {}
   }, [error]);
 
   return (

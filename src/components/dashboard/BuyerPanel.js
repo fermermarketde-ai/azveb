@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "@/i18n/routing";
 import { apiFetch } from "@/lib/apiClient";
 import MessagingPanel from "@/components/chat/MessagingPanel";
@@ -369,7 +369,11 @@ function ProfileSettings({ user }) {
     phone: user?.phone || "",
     region: user?.region || "",
     city: user?.city || "",
+    avatarUrl: user?.avatarUrl || "",
+    bio: user?.bio || "",
   });
+  const avatarInputRef = useRef(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [saving, setSaving] = useState(false);
   const [savingPw, setSavingPw] = useState(false);
@@ -403,19 +407,64 @@ function ProfileSettings({ user }) {
     } finally { setSavingPw(false); }
   }
 
+  async function handleAvatarUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setError("Maksimum 5MB"); return; }
+    setAvatarUploading(true); setError("");
+    try {
+      const fd = new FormData();
+      fd.append("files", file);
+      const res = await apiFetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      const url = data.url || data.images?.[0]?.url;
+      if (url) {
+        setForm(prev => ({ ...prev, avatarUrl: url }));
+        // Save immediately
+        await apiFetch("/api/users/me", { method: "PATCH", body: JSON.stringify({ avatarUrl: url }) });
+        setMsg("Profil şəkli yeniləndi");
+      } else { setError("Şəkil yüklənmədi"); }
+    } catch { setError("Yükləmə xətası"); }
+    finally { setAvatarUploading(false); if (avatarInputRef.current) avatarInputRef.current.value = ""; }
+  }
+
   const initials = (user?.fullName || "?").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
 
   return (
     <div className="space-y-5">
       {/* Avatar */}
       <div className="card p-5 flex items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-2xl font-bold shrink-0">
-          {initials}
+        <div className="relative shrink-0">
+          <div
+            onClick={() => avatarInputRef.current?.click()}
+            className="w-20 h-20 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-2xl font-bold cursor-pointer overflow-hidden hover:ring-2 hover:ring-brand-400 transition"
+          >
+            {form.avatarUrl ? (
+              <img src={form.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            ) : avatarUploading ? (
+              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              initials
+            )}
+          </div>
+          {form.avatarUrl && (
+            <button
+              type="button"
+              onClick={() => { setForm(prev => ({ ...prev, avatarUrl: "" })); }}
+              className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
+            >×</button>
+          )}
+          <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
         </div>
         <div>
           <p className="font-bold text-lg">{user?.fullName}</p>
           <p className="caption">{user?.email}</p>
           <span className="badge badge-blue mt-1">{user?.role}</span>
+          <button
+            type="button"
+            onClick={() => avatarInputRef.current?.click()}
+            className="text-xs text-brand-600 font-medium mt-1 hover:text-brand-700"
+          >{form.avatarUrl ? "Şəkli dəyiş" : "Profil şəkli yüklə"}</button>
         </div>
       </div>
 
@@ -442,6 +491,16 @@ function ProfileSettings({ user }) {
               <label className="label-sm">Şəhər/Rayon</label>
               <input value={form.city} onChange={e=>setForm(f=>({...f,city:e.target.value}))} className="input-field" placeholder="Abşeron" />
             </div>
+          </div>
+          <div>
+            <label className="label-sm">Haqqında</label>
+            <textarea
+              value={form.bio}
+              onChange={e=>setForm(f=>({...f,bio:e.target.value}))}
+              rows={3}
+              className="input-field"
+              placeholder="Özünüz haqqında qısa məlumat..."
+            />
           </div>
           <button type="submit" disabled={saving} className="btn-primary w-full">{saving ? "Yadda saxlanır..." : "Yadda saxla"}</button>
         </form>

@@ -12,7 +12,7 @@ export async function GET(request) {
     select: {
       id: true, email: true, phone: true, fullName: true, role: true,
       status: true, locale: true, emailVerified: true, phoneVerified: true,
-      createdAt: true,
+      createdAt: true, avatarUrl: true, bio: true, region: true, city: true,
       store: { select: { id: true, name: true, slug: true, description: true, address: true, phone: true, whatsapp: true, logoUrl: true, coverUrl: true, isVerified: true, isActive: true, installmentEnabled: true, installmentWhatsapp: true } },
       ownedStores: { select: { id: true, name: true, slug: true, isVerified: true, isActive: true } },
       modules: { select: { module: true } },
@@ -61,11 +61,13 @@ export async function PATCH(request) {
   if (body.phone !== undefined) allowedData.phone = body.phone;
   if (body.region !== undefined) allowedData.region = body.region;
   if (body.city !== undefined) allowedData.city = body.city;
+  if (body.avatarUrl !== undefined) allowedData.avatarUrl = body.avatarUrl;
+  if (body.bio !== undefined) allowedData.bio = body.bio;
 
   const user = await prisma.user.update({
     where: { id: authUser.sub },
     data: allowedData,
-    select: { id: true, email: true, fullName: true, phone: true, locale: true, region: true, city: true },
+    select: { id: true, email: true, fullName: true, phone: true, locale: true, region: true, city: true, avatarUrl: true, bio: true },
   });
 
   return Response.json({ user });

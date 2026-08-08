@@ -94,12 +94,13 @@ export default function BrandsManager() {
       return;
     }
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("files", file);
     try {
       const res = await apiFetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json();
-      if (data.url) {
-        setForm(prev => ({ ...prev, logoUrl: data.url }));
+      const url = data.url || data.images?.[0]?.url;
+      if (url) {
+        setForm(prev => ({ ...prev, logoUrl: url }));
         toast.success("Şəkil yükləndi");
       } else {
         toast.error("Şəkil yüklənmədi");

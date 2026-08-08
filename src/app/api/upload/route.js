@@ -5,7 +5,9 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per image
 const MAX_FILES = 8;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
-// POST /api/upload — multipart/form-data with one or more "files" fields.
+// POST /api/upload — multipart/form-data with one or more "files" or "file" fields.
+// Accepts both "files" (plural, for multi-upload) and "file" (singular, for single upload).
+// Returns { images: [{ url }] } (array) AND { url: "..." } (first URL, for backward compat).
 // Open to guests too (guest classifieds need to upload photos without an account),
 // but validated for type/size/count to prevent abuse.
 export async function POST(request) {
@@ -19,7 +21,12 @@ export async function POST(request) {
     return Response.json({ error: "Yanlış form-data formatı" }, { status: 400 });
   }
 
-  const files = formData.getAll("files").filter((f) => typeof f === "object" && f.size !== undefined);
+  // Accept both "files" (plural) and "file" (singular) field names
+  const files = [
+    ...formData.getAll("files"),
+    ...formData.getAll("file"),
+  ].filter((f) => typeof f === "object" && f.size !== undefined);
+
   if (!files.length) {
     return Response.json({ error: "Heç bir fayl tapılmadı" }, { status: 400 });
   }
@@ -47,5 +54,11 @@ export async function POST(request) {
     }
   }
 
-  return Response.json({ images: uploaded }, { status: 201 });
+  // Return both formats for backward compatibility:
+  // - images: array of { url } for multi-file callers (ImageUploader, elan-yerlesdir, etc.)
+  // - url: first URL string for single-file callers (BrandsManager, StoreProfileHeader)
+  return Response.json(
+    { images: uploaded, url: uploaded[0]?.url || null },
+    { status: 201 }
+  );
 }

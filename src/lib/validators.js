@@ -204,6 +204,7 @@ export const productUpdateSchema = productRawSchema
   .partial()
   .extend({
     status: z.enum(["DRAFT", "PENDING_REVIEW", "ACTIVE", "SOLD", "EXPIRED", "REJECTED"]).optional(),
+    rejectionReason: z.string().max(500).optional().nullable(),
   });
 
 export const storeCreateSchema = z.object({

@@ -16,6 +16,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonCard, SkeletonList } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useSiteTexts } from "@/lib/siteTexts";
+import Modal from "@/components/ui/Modal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ROLES = ["BUYER","FARMER","STORE","AGRONOMIST","DELIVERY_PARTNER","MODERATOR","ADMIN","SUPER_ADMIN"];
@@ -197,14 +198,39 @@ function RecentActivity({ activity, loading }) {
 // ─── Pending Products (Moderation) ───────────────────────────────────────────
 function PendingProducts() {
   const [items,setItems]=useState([]); const [loading,setLoading]=useState(true);
+  const [viewProduct,setViewProduct]=useState(null);
+  const [viewLoading,setViewLoading]=useState(false);
+  const [rejectNote,setRejectNote]=useState("");
+  const [acting,setActing]=useState(false);
   const { toast, ToastContainer } = useToast();
   const load = useCallback(()=>{
     setLoading(true);
     apiFetch("/api/products?status=PENDING_REVIEW&pageSize=50").then(d=>setItems(d.products||[])).catch(e=>toast(e.message,"error")).finally(()=>setLoading(false));
   },[]);
   useEffect(()=>{ load(); },[load]);
-  async function decide(id,status) {
-    try { await apiFetch(`/api/products/${id}`,{method:"PATCH",body:JSON.stringify({status})}); toast(status==="ACTIVE"?"Elan təsdiqləndi":"Elan rədd edildi","success"); load(); } catch(e){ toast(e.message,"error"); }
+  async function decide(id,status,note) {
+    setActing(true);
+    try {
+      const body = status==="REJECTED" ? { status, rejectionReason: note||"Rədd edildi" } : { status };
+      await apiFetch(`/api/products/${id}`,{method:"PATCH",body:JSON.stringify(body)});
+      toast(status==="ACTIVE"?"Elan təsdiqləndi":"Elan rədd edildi","success");
+      setViewProduct(null);
+      setRejectNote("");
+      load();
+    } catch(e){ toast(e.message,"error"); } finally { setActing(false); }
+  }
+  async function openView(id) {
+    setViewLoading(true);
+    setViewProduct({ id, loading:true });
+    try {
+      const d = await apiFetch(`/api/products/${id}`);
+      setViewProduct(d.product||d);
+    } catch(e) {
+      toast(e.message,"error");
+      setViewProduct(null);
+    } finally {
+      setViewLoading(false);
+    }
   }
   if (loading) return <SkeletonList count={5} />;
   if (!items.length) return <EmptyState icon="checkCircle" title="Moderasiya gözləyən elan yoxdur" subtitle="Bütün elanlar yoxlanılmışdır" />;
@@ -222,17 +248,30 @@ function PendingProducts() {
               <th className="table-cell text-left min-w-[200px]">Məhsul</th>
               <th className="table-cell text-left hidden md:table-cell w-44">Satıcı</th>
               <th className="table-cell text-left hidden sm:table-cell w-28">Qiymət</th>
-              <th className="table-cell text-right w-40 whitespace-nowrap">Əməl</th>
+              <th className="table-cell text-right w-52 whitespace-nowrap">Əməl</th>
             </tr>
           </thead>
           <tbody>
             {items.map(p=>(
               <tr key={p.id} className="table-row">
-                <td className="table-cell"><p className="font-medium line-clamp-1">{p.titleAz}</p><p className="caption">{p.category?.nameAz}</p></td>
+                <td className="table-cell">
+                  <button onClick={()=>openView(p.id)} className="flex items-center gap-2 text-left hover:underline">
+                    {p.coverImage ? (
+                      <img src={p.coverImage} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0 flex items-center justify-center text-gray-400"><Icon name="package" size={18} /></div>
+                    )}
+                    <span>
+                      <p className="font-medium line-clamp-1">{p.titleAz}</p>
+                      <p className="caption">{p.category?.nameAz}</p>
+                    </span>
+                  </button>
+                </td>
                 <td className="table-cell hidden md:table-cell text-gray-600">{p.seller?.fullName||"—"}</td>
                 <td className="table-cell hidden sm:table-cell font-semibold text-brand-700">₼{Number(p.price).toLocaleString("az-AZ")}</td>
                 <td className="table-cell">
                   <div className="flex items-center gap-2 justify-end">
+                    <button onClick={()=>openView(p.id)} className="btn-secondary btn-xs flex items-center gap-1"><Icon name="eye" size={12} />Bax</button>
                     <button onClick={()=>decide(p.id,"ACTIVE")} className="btn-primary btn-xs flex items-center gap-1"><Icon name="check" size={12} />Təsdiqlə</button>
                     <button onClick={()=>decide(p.id,"REJECTED")} className="btn-danger btn-xs flex items-center gap-1"><Icon name="close" size={12} />Rədd et</button>
                   </div>
@@ -242,6 +281,80 @@ function PendingProducts() {
           </tbody>
         </table>
       </div>
+
+      <Modal open={!!viewProduct} onClose={()=>{setViewProduct(null);setRejectNote("");}} title="Elana Baxış" size="xl">
+        {viewProduct?.loading ? (
+          <div className="py-10 text-center text-gray-400">Yüklənir...</div>
+        ) : viewProduct ? (
+          <div className="space-y-4 max-h-[75vh] overflow-y-auto">
+            {viewProduct.images?.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {viewProduct.images.map((img,i)=>(
+                  <a key={i} href={img.url} target="_blank" rel="noopener noreferrer">
+                    <img src={img.url} alt={img.altText||""} className="w-full h-40 object-cover rounded-xl border border-gray-100" />
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div className="w-full h-40 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400"><Icon name="package" size={36} /></div>
+            )}
+
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">{viewProduct.titleAz}</h3>
+              <p className="text-sm text-gray-500">{viewProduct.category?.nameAz}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="p-3 bg-gray-50 rounded-xl"><p className="caption">Qiymət</p><p className="font-bold text-brand-700">₼{Number(viewProduct.price).toLocaleString("az-AZ")} / {viewProduct.unit}</p></div>
+              <div className="p-3 bg-gray-50 rounded-xl"><p className="caption">Stok</p><p className="font-bold">{viewProduct.stock} {viewProduct.unit}</p></div>
+              <div className="p-3 bg-gray-50 rounded-xl"><p className="caption">Bölgə</p><p className="font-medium">{viewProduct.city||viewProduct.region||"—"}</p></div>
+              <div className="p-3 bg-gray-50 rounded-xl"><p className="caption">Tarix</p><p className="font-medium">{new Date(viewProduct.createdAt).toLocaleDateString("az-AZ")}</p></div>
+            </div>
+
+            {viewProduct.isCorporate && (
+              <div className="p-3 bg-purple-50 border border-purple-100 rounded-xl text-sm flex items-center gap-2">
+                <Icon name="briefcase" size={14} className="text-purple-600" />
+                <span className="text-purple-700 font-medium">Korporativ elan · Min sifariş: {viewProduct.minOrderQty||"-"} {viewProduct.unit}</span>
+              </div>
+            )}
+
+            <div>
+              <p className="caption mb-1">Təsvir</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewProduct.descriptionAz || "Təsvir yoxdur"}</p>
+            </div>
+
+            <div className="p-3 bg-gray-50 rounded-xl text-sm">
+              <p className="caption mb-1">Satıcı</p>
+              {viewProduct.seller ? (
+                <p className="font-medium">{viewProduct.seller.fullName} {viewProduct.seller.phone ? `· ${viewProduct.seller.phone}` : ""}</p>
+              ) : viewProduct.guestName ? (
+                <p className="font-medium">{viewProduct.guestName} (Qonaq) {viewProduct.guestPhone ? `· ${viewProduct.guestPhone}` : ""}</p>
+              ) : (
+                <p className="text-gray-400">Məlumat yoxdur</p>
+              )}
+            </div>
+
+            {viewProduct.tags?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {viewProduct.tags.map((t,i)=><span key={i} className="badge badge-gray text-xs">#{t}</span>)}
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-gray-100 space-y-2">
+              <input
+                value={rejectNote}
+                onChange={e=>setRejectNote(e.target.value)}
+                placeholder="Rədd səbəbi (rədd etmək istəyirsinizsə yazın)"
+                className="input-field text-sm"
+              />
+              <div className="flex gap-2">
+                <button disabled={acting} onClick={()=>decide(viewProduct.id,"ACTIVE")} className="btn-primary flex-1 disabled:opacity-50 flex items-center justify-center gap-1"><Icon name="check" size={14} />Təsdiqlə</button>
+                <button disabled={acting} onClick={()=>decide(viewProduct.id,"REJECTED",rejectNote)} className="btn-danger flex-1 disabled:opacity-50 flex items-center justify-center gap-1"><Icon name="close" size={14} />Rədd et</button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 }

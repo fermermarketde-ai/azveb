@@ -31,7 +31,7 @@ function getRefreshSecret() {
   return validateJwtSecrets().refreshSecret;
 }
 
-const ACCESS_TOKEN_TTL = "15m";
+const ACCESS_TOKEN_TTL = "7d";
 const REFRESH_TOKEN_TTL_DAYS = 30;
 
 export async function hashPassword(plain) {

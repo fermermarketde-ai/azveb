@@ -1,4 +1,4 @@
-const CACHE_NAME = "fermermarket-shell-v4";
+const CACHE_NAME = "fermermarket-shell-v5";
 const APP_SHELL = [
   "/manifest.json",
   "/icons/icon-192.png",
@@ -52,19 +52,31 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  const isStaticAsset =
-    url.pathname.startsWith("/_next/static/") ||
-    url.pathname.startsWith("/icons/") ||
-    url.pathname.endsWith(".png") ||
-    url.pathname.endsWith(".jpg") ||
-    url.pathname.endsWith(".jpeg") ||
-    url.pathname.endsWith(".svg") ||
-    url.pathname.endsWith(".ico") ||
-    url.pathname.endsWith(".css") ||
-    url.pathname.endsWith(".js") ||
-    url.pathname.endsWith(".json");
+  // CRITICAL: never intercept cross-origin requests (e.g. Vercel Blob storage
+  // product/slide/avatar images, external APIs). These change frequently
+  // (users upload new images, old blob URLs get replaced) and a cache-first
+  // strategy here permanently "freezes" images in every visitor's browser,
+  // masking real content updates indefinitely — including making it look
+  // like a freshly-uploaded image "isn't showing" when it's actually just
+  // stuck serving a stale cached response (or a stale opaque no-cors
+  // response) from a much earlier visit. Cross-origin assets always go
+  // straight to the network.
+  if (url.origin !== self.location.origin) {
+    return;
+  }
 
-  if (!isStaticAsset) {
+  // Only same-origin build assets (hashed Next.js chunks, icons, manifest)
+  // are safe to cache-first — their filenames change on every deploy, so a
+  // stale cache entry is never served for new code. Everything else
+  // (including same-origin /uploads-style paths if ever added) skips SW
+  // caching entirely to avoid freezing stale content.
+  const isHashedBuildAsset = url.pathname.startsWith("/_next/static/");
+  const isAppShellAsset =
+    url.pathname.startsWith("/icons/") ||
+    url.pathname === "/manifest.json" ||
+    url.pathname === "/offline.html";
+
+  if (!isHashedBuildAsset && !isAppShellAsset) {
     return;
   }
 

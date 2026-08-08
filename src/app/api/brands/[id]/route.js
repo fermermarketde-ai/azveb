@@ -29,9 +29,15 @@ export async function PATCH(request, { params }) {
 
   try {
     const body = await request.json();
+    // Whitelist allowed fields for security
+    const allowed = {};
+    const fields = ["name", "slug", "logoUrl", "country", "website", "description", "isActive", "sortOrder"];
+    for (const f of fields) {
+      if (body[f] !== undefined) allowed[f] = body[f];
+    }
     const brand = await prisma.brand.update({
       where: { id: resolvedParams.id },
-      data: body,
+      data: allowed,
     });
     return Response.json({ brand });
   } catch (error) {

@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(request) {
+  const rl = rateLimit(request, { limit: 5, windowMs: 60_000, keyPrefix: "contact" });
+  if (rl) return rl;
   try {
     const data = await request.json();
 

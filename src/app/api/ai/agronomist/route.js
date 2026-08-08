@@ -1,8 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rateLimit";
 import { geminiGenerate, isModuleActive } from "@/lib/gemini";
 
 // POST /api/ai/agronomist — AI disease detection + product recommendation via Gemini
 export async function POST(req) {
+  const rl = rateLimit(req || request, { limit: 10, windowMs: 60_000, keyPrefix: "ai" });
+  if (rl) return rl;
   try {
     if (!(await isModuleActive("agronomist"))) {
       return Response.json({ error: "Bu modul deaktiv edilib" }, { status: 403 });

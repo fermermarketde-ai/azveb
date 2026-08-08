@@ -1,8 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rateLimit";
 import { geminiGenerate, isModuleActive } from "@/lib/gemini";
 
 // GET /api/ai/price-index — AI price forecast for a product category
 export async function GET(request) {
+  const rl = rateLimit(request, { limit: 10, windowMs: 60_000, keyPrefix: "ai" });
+  if (rl) return rl;
   try {
     if (!(await isModuleActive("price-index"))) {
       return Response.json({ error: "Bu modul deaktiv edilib" }, { status: 403 });

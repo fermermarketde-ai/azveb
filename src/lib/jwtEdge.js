@@ -11,7 +11,8 @@
  * We intentionally keep this simple: only HS256, only verify (no sign).
  */
 
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "dev-access-secret";
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
+if (!ACCESS_SECRET) console.warn("WARNING: JWT_ACCESS_SECRET not set — middleware auth will reject all tokens.");
 
 /**
  * Lightweight HS256 JWT verification for Edge Runtime.

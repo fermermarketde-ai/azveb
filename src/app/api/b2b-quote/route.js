@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(req) {
+  const rl = rateLimit(req, { limit: 10, windowMs: 60_000, keyPrefix: "b2b" });
+  if (rl) return rl;
   try {
     const { sellerId, productId, name, company, quantity, message } = await req.json();
 

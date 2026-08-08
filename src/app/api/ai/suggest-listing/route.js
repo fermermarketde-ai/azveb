@@ -2,6 +2,8 @@ import { geminiGenerate, isModuleActive } from "@/lib/gemini";
 
 // POST /api/ai/suggest-listing — AI generates listing title + description from image/text
 export async function POST(req) {
+  const rl = rateLimit(req || request, { limit: 10, windowMs: 60_000, keyPrefix: "ai" });
+  if (rl) return rl;
   try {
     if (!(await isModuleActive("suggest-listing"))) {
       return NextResponse.json({ error: "Bu modul deaktiv edilib" }, { status: 403 });

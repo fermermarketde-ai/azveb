@@ -1524,16 +1524,22 @@ function AdSlotEditor({ slotKey, slot, onSaved, toast }) {
 }
 
 function AdSlotsManager() {
+  const { t } = useSiteTexts();
   const [slots,setSlots]=useState({}); const [loading,setLoading]=useState(true);
+  const [error,setError]=useState(null);
   const { toast, ToastContainer } = useToast();
   const SLOT_KEYS=["HOMEPAGE_TOP","SIDEBAR_LEFT","SIDEBAR_RIGHT","LIST_TOP","INFEED_SPONSORED","DETAIL_SIDEBAR","FOOTER_STRIP"];
 
   function load(){
     setLoading(true);
+    setError(null);
     apiFetch("/api/ad-slots?includeCode=1").then(d=>{
       const arr=d.slots||[];
       const obj=Array.isArray(arr)?Object.fromEntries(arr.map(s=>[s.key,s])):arr;
       setSlots(obj);
+    }).catch(e=>{
+      setError(e.message || "Reklam yerləri yüklənmədi");
+      toast("Reklam yerləri yüklənmədi", "error");
     }).finally(()=>setLoading(false));
   }
   useEffect(()=>{ load(); },[]);

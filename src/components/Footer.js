@@ -8,12 +8,12 @@ import { useSiteTexts } from "@/lib/siteTexts";
 export default function Footer() {
   const currentYear = new Date().getFullYear();
   const { t: st } = useSiteTexts();
-  const phone = st("footer.phone", "+994 10 521 09 09");
+  const phone = st("footer.phone", "+994 10 223 89 89");
   const phoneTel = phone.replace(/[^\d+]/g, "");
   const whatsappPhone = st("footer.whatsappPhone", phoneTel);
   const email = st("footer.email", "info@fermermarket.az");
-  const facebookUrl = st("footer.facebookUrl", "https://facebook.com");
-  const instagramUrl = st("footer.instagramUrl", "https://instagram.com");
+  const facebookUrl = st("footer.facebookUrl", "https://www.facebook.com/share/1E5ZmiF5Dq/");
+  const instagramUrl = st("footer.instagramUrl", "https://www.instagram.com/fermermarket.mmc?igsh=Ym1tYnNuYnhrYXBi");
   
   return (
     <footer className="relative bg-gray-900 text-gray-300 pt-12 md:pt-16 pb-16 md:pb-20 mt-8 md:mt-12">
